@@ -9,6 +9,7 @@ import { GUIDELINES } from './guidelines';
 import type {
   Attachment,
   DiagnosisResult,
+  Speaker,
   StructuredEntities,
   Suggestion,
   Transcript,
@@ -202,6 +203,40 @@ export async function reasonDifferentials(
 
   const res = await client().generateContent(parts);
   return normalizeDiagnosis(parseJson<Partial<DiagnosisResult>>(res.response.text()));
+}
+
+// ---------------------------------------------------------------------------
+// Speaker role attribution (item 1, second half).
+//
+// The Sarvam batch pass yields acoustically-diarized segments, but its speaker
+// ids ("0"/"1") reset per chunk file, so they cannot name who is the Doctor
+// and who is the Patient across the whole consult. This lightweight call maps
+// every segment to a global role using content plus the within-chunk speaker
+// consistency hints.
+// ---------------------------------------------------------------------------
+
+const ROLE_PROMPT = `You are labelling speakers in a diarized doctor-patient consult transcript (Indian OPD, Hinglish).
+Each line below is "index | chunk:speakerId | text". The speakerId is only consistent WITHIN a chunk: inside one chunk, lines sharing a speakerId are the same person; across chunks the ids reset and mean nothing.
+Assign every line to "Doctor" or "Patient". The doctor asks questions, examines, prescribes; the patient describes symptoms and answers.
+Output ONLY valid JSON, no markdown: { "roles": ["Doctor" | "Patient", ...] } with exactly one entry per input line, in order.`;
+
+export async function attributeRoles(
+  segments: { text: string; localSpeaker: string; chunkId: string }[]
+): Promise<Speaker[] | null> {
+  if (!hasGemini || segments.length === 0) return null;
+  try {
+    const body = segments
+      .map((s, i) => `${i} | ${s.chunkId}:${s.localSpeaker || '?'} | ${s.text}`)
+      .join('\n');
+    const res = await client().generateContent(`${ROLE_PROMPT}\n\n${body}`);
+    const parsed = parseJson<{ roles?: string[] }>(res.response.text());
+    const roles = parsed.roles ?? [];
+    if (roles.length !== segments.length) return null;
+    return roles.map((r) => (r === 'Doctor' || r === 'Patient' ? r : 'Unknown'));
+  } catch (err) {
+    console.warn('[attributeRoles] failed:', err);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------

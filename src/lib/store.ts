@@ -37,8 +37,11 @@ interface AppState {
   chunks: AudioChunk[];
   /** Clinician feedback per differential index (item 6). Local-only for now. */
   feedback: Record<number, { vote: FeedbackVote; comment?: string }>;
+  /** True while the post-consult batch diarization pass is re-attributing speakers. */
+  refining: boolean;
 
   setTranscript: (t: Transcript | null) => void;
+  setRefining: (refining: boolean) => void;
   setEntities: (e: StructuredEntities | null) => void;
   setDiagnosis: (d: DiagnosisResult | null) => void;
   setChunks: (c: AudioChunk[]) => void;
@@ -76,8 +79,10 @@ export const useConsult = create<AppState>((set, get) => ({
   attachments: [],
   chunks: [],
   feedback: {},
+  refining: false,
 
   setTranscript: (transcript) => set({ transcript }),
+  setRefining: (refining) => set({ refining }),
   setEntities: (entities) => set({ entities }),
   setDiagnosis: (diagnosis) => set({ diagnosis }),
   setChunks: (chunks) => set({ chunks }),
@@ -92,5 +97,5 @@ export const useConsult = create<AppState>((set, get) => ({
   removeAttachment: (id) => set((s) => ({ attachments: s.attachments.filter((x) => x.id !== id) })),
 
   reset: () =>
-    set({ transcript: null, entities: null, diagnosis: null, attachments: [], chunks: [], feedback: {} }),
+    set({ transcript: null, entities: null, diagnosis: null, attachments: [], chunks: [], feedback: {}, refining: false }),
 }));

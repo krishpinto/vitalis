@@ -18,6 +18,7 @@ import { TranscriptView } from '@/components/TranscriptView';
 import { EmptyState, ErrorCard, PrimaryButton, Rise, T } from '@/components/ui';
 import { hasSarvam } from '@/lib/env';
 import { suggestQuestions } from '@/lib/gemini';
+import { refineTranscript } from '@/lib/refine';
 import { DEMO_LINE_COUNT, demoLineAt, transcribeChunk } from '@/lib/sarvam';
 import { useConsult } from '@/lib/store';
 import { color, radius, shadow, space } from '@/theme';
@@ -255,6 +256,20 @@ export default function ConsultScreen() {
     setChunks(chunksRef.current);
     setTranscript({ lines: finalLines, languageCode: 'hi-IN', isDemo: !hasSarvam });
     router.replace('/review');
+
+    // Item 1 — background batch-diarization pass. Review shows the live
+    // heuristic transcript immediately; when the batch job lands, speaker
+    // labels are swapped in place. On any failure the heuristic stays.
+    if (hasSarvam && chunksRef.current.length) {
+      const { setRefining, setTranscript: swap } = useConsult.getState();
+      setRefining(true);
+      refineTranscript(chunksRef.current, 'hi-IN')
+        .then((refined) => {
+          if (refined) swap(refined);
+        })
+        .catch((err) => console.warn('[refine]', err))
+        .finally(() => useConsult.getState().setRefining(false));
+    }
   }
 
   const recording = phase === 'recording';

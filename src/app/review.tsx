@@ -17,7 +17,7 @@ import type { Attachment } from '@/types/clinical';
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const { transcript, chunks, entities, setEntities, setDiagnosis, attachments, addAttachment, removeAttachment } =
+  const { transcript, chunks, entities, setEntities, setDiagnosis, attachments, addAttachment, removeAttachment, refining } =
     useConsult();
 
   const [structuring, setStructuring] = useState(false);
@@ -85,7 +85,11 @@ export default function ReviewScreen() {
         <SectionHeader
           title="Transcript"
           trailing={
-            transcript.isDemo ? <Chip label="synthetic" tint={color.ribbonText} soft={color.ribbonBg} /> : undefined
+            refining ? (
+              <Chip label="refining speakers…" />
+            ) : transcript.isDemo ? (
+              <Chip label="synthetic" tint={color.ribbonText} soft={color.ribbonBg} />
+            ) : undefined
           }
         />
         <TranscriptView lines={transcript.lines} chunks={chunks} />
