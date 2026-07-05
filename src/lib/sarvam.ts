@@ -116,6 +116,10 @@ function sttUpload(audioUri: string): Promise<any> {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', STT_ENDPOINT);
     xhr.setRequestHeader('api-subscription-key', ENV.SARVAM_API_KEY);
+    // A hung upload must not stall the chunk loop — fail fast, the next 7s
+    // chunk gets a fresh attempt.
+    xhr.timeout = 20_000;
+    xhr.ontimeout = () => reject(new Error('Sarvam STT timed out'));
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {

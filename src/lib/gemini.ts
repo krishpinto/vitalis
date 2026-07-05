@@ -22,6 +22,26 @@ function client() {
   return new GoogleGenerativeAI(ENV.GEMINI_API_KEY).getGenerativeModel({ model: MODEL });
 }
 
+/**
+ * Reject if a vendor call hangs — a stalled network request must surface as a
+ * retryable error card, never an infinite spinner (demo-reliability rule).
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out — check connection and retry`)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
 /** Strip markdown code fences and parse JSON defensively. Throws on malformed JSON. */
 function parseJson<T>(raw: string): T {
   const cleaned = raw
@@ -66,7 +86,11 @@ export async function structureTranscript(transcript: Transcript): Promise<Struc
     await new Promise((r) => setTimeout(r, 900));
     return demoEntities();
   }
-  const res = await client().generateContent(`${STRUCTURING_PROMPT}\n${transcriptToText(transcript)}`);
+  const res = await withTimeout(
+    client().generateContent(`${STRUCTURING_PROMPT}\n${transcriptToText(transcript)}`),
+    30_000,
+    'Structuring'
+  );
   return parseJson<StructuredEntities>(res.response.text());
 }
 
@@ -201,7 +225,7 @@ export async function reasonDifferentials(
     ...attachments.map((a) => ({ inlineData: { mimeType: a.mimeType, data: a.base64 } })),
   ];
 
-  const res = await client().generateContent(parts);
+  const res = await withTimeout(client().generateContent(parts), 60_000, 'Differential draft');
   return normalizeDiagnosis(parseJson<Partial<DiagnosisResult>>(res.response.text()));
 }
 
@@ -228,7 +252,11 @@ export async function attributeRoles(
     const body = segments
       .map((s, i) => `${i} | ${s.chunkId}:${s.localSpeaker || '?'} | ${s.text}`)
       .join('\n');
-    const res = await client().generateContent(`${ROLE_PROMPT}\n\n${body}`);
+    const res = await withTimeout(
+      client().generateContent(`${ROLE_PROMPT}\n\n${body}`),
+      45_000,
+      'Speaker attribution'
+    );
     const parsed = parseJson<{ roles?: string[] }>(res.response.text());
     const roles = parsed.roles ?? [];
     if (roles.length !== segments.length) return null;
@@ -277,7 +305,7 @@ export async function suggestQuestions(
   const transcriptText = lines.map((l) => `${l.speaker}: ${l.text}`).join('\n');
   const prompt = `${SUGGESTION_PROMPT}\n\nALREADY SUGGESTED:\n${alreadySuggested.map((q) => `- ${q}`).join('\n') || '(none)'}\n\nTRANSCRIPT SO FAR:\n${transcriptText}`;
 
-  const res = await client().generateContent(prompt);
+  const res = await withTimeout(client().generateContent(prompt), 15_000, 'Suggestions');
   const parsed = parseJson<{ suggestions?: { question?: string; rationale?: string }[] }>(
     res.response.text()
   );

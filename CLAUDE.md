@@ -31,12 +31,17 @@ second-assistant tone.
 | STT: Sarvam Saaras v3, `codemix`, 7s chunked batch | ✅ Real |
 | LLM: Gemini 2.5 Flash — Call #1 structuring, Call #2 tiered DD + citations | ✅ Real |
 | Screens: Landing → Patients → Consult → Review → Diagnosis | ✅ Functional |
-| **UI quality** | ❌ **Unstyled — functional text, no design system. Primary gap.** |
-| Speaker diarization | ❌ Faked (alternating heuristic) |
-| Backend / API layer | ❌ None — client calls vendors directly |
-| Persistence | ❌ In-memory only |
+| UI quality (item 0: tokens, shared kit, all screens restyled) | ✅ To spec |
+| Speaker diarization (item 1: Sarvam Batch pass after stop + Gemini role attribution, swaps in on Review; live view keeps the alternating heuristic until it lands, and on any failure) | ✅ Real, safe fallback |
+| Audio-linked evidence (item 2: tap line / differential → play chunk) | ✅ |
+| Gap detection, alignment, suggestion cards, feedback (items 3–6) | ✅ |
+| Photo input to Gemini Call #2 (item 7) | ✅ Wired |
+| Vendor-call timeouts (structuring 30s / DD 60s / suggestions 15s / chunk STT 20s) → retryable error cards, never infinite spinners | ✅ |
+| Backend / API layer (item 8) | ❌ None — client calls vendors directly |
+| Persistence (item 8) | ❌ In-memory only |
+| Consent capture + retention policy (item 9) | ❌ Not built |
 | Guidelines content | ⚠️ 8 placeholder excerpts, unverified |
-| Supabase storage, TTS (Bulbul), image input to Gemini | ⚙️ Coded, not wired |
+| Supabase storage upload, TTS (Bulbul) | ⚙️ Coded, not wired |
 
 Known flaw: keys ship in client via `EXPO_PUBLIC_*`. Fixed by item 8.
 

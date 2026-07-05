@@ -281,7 +281,16 @@ export default function ConsultScreen() {
         ref={scrollRef}
         style={styles.chat}
         contentContainerStyle={[styles.chatContent, { paddingTop: HEADER_HEIGHT + space.l }]}>
-        {sttError && <ErrorCard message={sttError} onRetry={recording ? undefined : start} />}
+        {sttError &&
+          (recording ? (
+            // Transient mid-consult hiccup — the next 7s chunk retries on its
+            // own, so keep it quiet instead of alarming the room.
+            <T variant="caption" tone="faint" style={styles.listeningNote}>
+              connection hiccup — retrying with the next chunk…
+            </T>
+          ) : (
+            <ErrorCard message={sttError} onRetry={start} />
+          ))}
         {lines.length === 0 && !sttError ? (
           <View style={styles.emptyWrap}>
             <EmptyState
