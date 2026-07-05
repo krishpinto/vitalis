@@ -1,166 +1,226 @@
-# Project: Ambient Clinical Second-Opinion Assistant (MVP / Investor Demo)
+# CLAUDE.md — Second Opinion
 
 ## What this is
-A React Native (Expo) mobile app for doctors. It listens to a doctor-patient consult, transcribes it in Hinglish (Hindi-English code-mixed), lets the doctor attach photos and prior records, and generates a cited differential diagnosis as a second-opinion draft. This is a prototype for investor demo — scope is narrow, do not let it creep.
+Ambient clinical second-opinion assistant for Indian OPDs. Records the
+doctor–patient consult, transcribes Hinglish (Hindi–English code-mix) live,
+and generates a cited, tiered differential-diagnosis draft the doctor reviews
+and signs off. Always a draft — never a final diagnosis. The clinician is the
+final authority in every flow.
 
-## Hard rules — read before writing any code
-- Every diagnostic suggestion must cite: (1) the transcript line it came from, (2) which guideline statement it's based on. No ungrounded claims. This is the #1 credibility feature — do not cut it.
-- All output is framed as a draft requiring doctor sign-off. Never present anything as a final diagnosis.
-- Use synthetic/fake patient data only during development and demo. Never process real patient data.
-- Do not add RAG, vector DB, or any retrieval pipeline — not in scope for this build. Guidelines go directly into the Gemini system prompt as a text block.
+Clinical scope: **acute febrile illness** (dengue / typhoid / malaria). One
+vertical, deep. No multi-specialty work in this build.
 
-## Tech stack
-- **Framework**: Expo (managed workflow)
-- **Language**: TypeScript
-- **STT**: Sarvam AI Saaras API — handles Hindi-English code-mixing + speaker diarization. Do not use Whisper or Google STT, they will fail on Hinglish.
-- **LLM**: Gemini 1.5 Pro API (multimodal — handles text + images in one call)
-- **TTS**: Sarvam AI Bulbul API (build last, cut if time-constrained)
-- **Backend/storage**: Supabase (Postgres + auth + file storage)
-- **Guidelines**: Plain text block in Gemini system prompt — no vector DB, no RAG
+Build goal: an MVP that **looks and feels like a finished medical product** —
+demo-ready for incubation/investor pitches and doctor feedback pilots. Visual
+quality is a first-class requirement, not polish at the end.
 
-## Environment variables needed
-```
-SARVAM_API_KEY=
-GEMINI_API_KEY=
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-```
+## Positioning
+> AI scribes write down what happened. We catch what didn't.
 
-## Architecture (exactly this, nothing more)
+Defensible order: (1) auditable linked audio evidence, (2) Hinglish code-mix →
+structured English proforma, (3) gap detection, (4) deferential
+second-assistant tone.
 
-```
-[Mobile App]
-    |
-    |-- Audio capture (chunked, local buffer first)
-    |       --> Sarvam STT API --> diarized transcript (Doctor / Patient labelled)
-    |
-    |-- Photo capture / prior records upload
-    |       --> Supabase Storage --> returned as base64 for Gemini vision
-    |
-    v
-[Gemini Call #1 — Structuring]
-    Input:  raw diarized transcript
-    Output: structured JSON
-    {
-      symptoms: [...],
-      duration: "...",
-      history: [...],
-      medications: [...],
-      doctor_observations: [...]
-    }
-    |
-    v
-[Gemini Call #2 — Reasoning]
-    Input:
-      - structured JSON from Call #1
-      - base64 images (photos + record scans, if any)
-      - guidelines text block in system prompt
-    Output: differential diagnosis JSON
-    {
-      differentials: [
-        {
-          diagnosis: "...",
-          tier: "most_likely" | "expanded" | "cant_miss",
-          reasoning: "...",
-          transcript_reference: "exact quote from transcript",
-          guideline_reference: "exact quote from guideline text used"
-        }
-      ],
-      suggested_workup: [...],
-      red_flags: [...]
-    }
-    |
-    v
-[UI]
-    - Transcript view (Doctor / Patient colour-coded)
-    - Structured entity summary card
-    - Differential list (3 tiers)
-    - Each differential: tap to expand → shows transcript quote + guideline quote
-    - Doctor can dismiss / accept each suggestion
-    - TTS readback button (optional, last)
-```
+---
 
-## Gemini system prompt structure (use this exact shape)
-```
-You are a clinical decision support assistant. You are NOT diagnosing the patient.
-You are providing a structured second-opinion draft for a licensed doctor to review and decide upon.
+## Current state (honest, as built)
 
-GUIDELINES:
-[paste guideline text block here — your medical co-founder provides this]
+| Layer | Status |
+|---|---|
+| Expo SDK 56, RN 0.85, React 19, TS strict, Expo Router, zustand | ✅ |
+| STT: Sarvam Saaras v3, `codemix`, 7s chunked batch | ✅ Real |
+| LLM: Gemini 2.5 Flash — Call #1 structuring, Call #2 tiered DD + citations | ✅ Real |
+| Screens: Landing → Patients → Consult → Review → Diagnosis | ✅ Functional |
+| **UI quality** | ❌ **Unstyled — functional text, no design system. Primary gap.** |
+| Speaker diarization | ❌ Faked (alternating heuristic) |
+| Backend / API layer | ❌ None — client calls vendors directly |
+| Persistence | ❌ In-memory only |
+| Guidelines content | ⚠️ 8 placeholder excerpts, unverified |
+| Supabase storage, TTS (Bulbul), image input to Gemini | ⚙️ Coded, not wired |
 
-RULES:
-- Every differential you suggest must cite a specific line from the transcript AND a specific line from the guidelines above.
-- Output ONLY valid JSON matching the schema provided. No prose, no markdown, no explanation outside the JSON.
-- If you cannot ground a suggestion in both the transcript and the guidelines, do not include it.
-- Always include a cant_miss tier even if probability is low.
-```
+Known flaw: keys ship in client via `EXPO_PUBLIC_*`. Fixed by item 8.
 
-## Build order — do not reorder, each phase must be demoable before moving on
+## Architecture rules (non-negotiable)
+- All vendor calls isolated in `/src/lib`. Screens never call APIs directly.
+- All LLM output typed (`/src/types/clinical.ts`), defensively parsed
+  (strip markdown fences, try/catch). No untyped JSON reaches a screen.
+- Every AI claim carries `transcript_reference` and, where applicable,
+  `guideline_reference`. Uncited output is a bug.
+- Gemini stays for this build. Model migration/fine-tuning is roadmap, not now.
+- DEMO watermark stays until real-patient compliance work exists — restyle it
+  (see design system) but never remove it.
 
-### Phase 1 — Audio + Transcript
-- Expo audio recording (expo-av)
-- Chunk audio locally, upload to Sarvam STT on stop
-- Display diarized transcript (Doctor / Patient colour-coded)
-- ✅ Done when: you can record Hinglish speech and see a labelled transcript
+---
 
-### Phase 2 — Structuring (Gemini Call #1)
-- Send transcript to Gemini, get structured entity JSON back
-- Display entity summary card in app
-- ✅ Done when: structured JSON is correct on 5 test transcripts manually checked by your medical co-founder
+## DESIGN SYSTEM — applies to every screen, every item. This is the spec.
 
-### Phase 3 — Reasoning (Gemini Call #2)
-- Build guideline text block with your medical co-founder (30-50 relevant excerpts, plain text)
-- Send entities + guideline system prompt to Gemini
-- Parse differential JSON, render in UI with evidence-tap feature
-- ✅ Done when: tapping a differential shows the transcript quote and guideline quote it came from
+The bar: a doctor should believe a funded team with a designer built this.
+No default React Native look. No dashboard-template look.
 
-### Phase 4 — Photo + Records
-- Camera capture + file upload (expo-image-picker)
-- Upload to Supabase Storage, convert to base64, pass into Gemini Call #2
-- ✅ Done when: attaching a wound photo changes the differential output meaningfully
+### Direction: "clinical calm" — LIGHT theme only
+Precision-instrument feel. Quiet, warm, trustworthy. Not startup-neon, not
+hospital-sterile. **No dark theme, no dark mode toggle — light only.**
 
-### Phase 5 — TTS (optional, cut if needed)
-- Button to read out diagnosis summary via Sarvam Bulbul API
-- ✅ Done when: tap button, hears Hindi or English readback of top differential
+Glass accents (expo-blur), restricted to exactly three surfaces:
+1. Consult sticky header — translucent + blur, chat scrolls beneath it
+2. Evidence bottom sheet — blurred backdrop behind the sheet
+3. In-consult suggestion cards — slight translucency (`rgba(255,255,255,0.85)`
+   + blur) over the chat
+Everywhere else: solid white cards on off-white. No blur on lists, buttons,
+or full screens — blur is expensive on mid-range Android and stacked
+translucency looks cheap. If a fourth glass surface appears, that's a bug.
 
-### Phase 6 — Demo polish
-- Script the exact 4-minute demo flow
-- Make that exact path bulletproof
-- Add DEMO DATA watermark everywhere so it's clear no real patients are involved
+### Tokens (define once in /src/theme, import everywhere — no inline hex)
+- Background: warm off-white `#FAF9F6`; cards `#FFFFFF`
+- Ink: primary text `#1A1D1F`; secondary `#5E6470`
+- Accent (one): deep teal `#0F6E6B` — actions, active states, links
+- Tier colors (muted, not traffic-light):
+  most_likely `#0F6E6B` teal / expanded `#8A6D1D` ochre / cant_miss `#8C3A32`
+  oxblood — used as thin left-border + small label chip, never full card fills
+- Semantic: red-flag banner bg `#FBEDEB` with `#8C3A32` text
+- Radius: cards 16, buttons 12, chips 999
+- Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 — no arbitrary values
+- Shadows: one subtle elevation only (y=2, blur=8, 6% opacity). No stacked
+  heavy shadows.
+- Type: Inter (or system SF/Roboto) — sizes 28 screen title / 17 body /
+  15 secondary / 13 caption, line-height 1.4. Titles semibold, never black-weight.
+- Icons: lucide-react-native only. No emoji anywhere in UI.
 
-## What NOT to build
-- No RAG, no vector DB, no embeddings
-- No fine-tuning
-- No EMR / ABDM integration
-- No real auth (mock login is fine for demo)
-- No multi-specialty (pick ONE with your co-founder and go deep on it)
-- No offline mode
+### Motion
+- Screen transitions: default stack slide, nothing custom.
+- Micro only: pressed-state scale 0.98, card entrance fade+4px rise (150ms,
+  staggered 40ms), recording indicator = soft opacity pulse (no bouncing).
+- Nothing loops except the recording pulse.
 
-## Folder structure
-```
-/app
-  /(tabs)
-    index.tsx          -- home / start consult
-    consult.tsx        -- active recording screen
-    review.tsx         -- transcript + entity summary
-    diagnosis.tsx      -- differential + evidence-tap UI
-  /components
-    TranscriptView.tsx
-    EntityCard.tsx
-    DifferentialCard.tsx
-    EvidenceModal.tsx
-  /lib
-    sarvam.ts          -- STT + TTS API calls
-    gemini.ts          -- Call #1 and Call #2 wrappers
-    supabase.ts        -- storage client
-    guidelines.ts      -- exports the guideline text block as a const string
-  /types
-    clinical.ts        -- TypeScript types for all JSON schemas above
-```
+### Component rules
+- One `Card`, one `PrimaryButton`, one `Chip`, one `SectionHeader` component —
+  reused everywhere. If a screen invents its own variant, that's a bug.
+- Empty states designed (icon + one line + action), never blank.
+- Loading = skeleton cards, never bare spinners.
+- Error = inline card with retry, never Alert.alert.
 
-## Key implementation notes for Claude Code
-- Audio: use `expo-av` for recording. Record in WAV or MP3 (check Sarvam's accepted formats first). Buffer locally before upload — do not stream to Sarvam mid-consult.
-- Sarvam STT endpoint: `POST https://api.sarvam.ai/speech-to-text` with `model: saaras:v2` and `with_diarization: true`
-- Gemini: use `@google/generative-ai` npm package. For Call #2 with images, use the `inlineData` format for base64 image parts.
-- Parse Gemini output defensively — strip any markdown fences before JSON.parse(), wrap in try/catch, show a graceful error if JSON is malformed rather than crashing.
-- All Gemini and Sarvam calls go through `/lib` — never call APIs directly from screen components.
+### Per-screen redesign (part of the build, not optional)
+- **Landing**: full-bleed calm intro, product name, one-line value prop,
+  single CTA. Restyle DEMO watermark into a slim top ribbon (amber `#B7791F`
+  on `#FDF6E9`) — legible, not screaming.
+- **Patients**: list of patient cards (avatar-initials circle, name, age/sex,
+  chief complaint line, last-consult timestamp). FAB for new patient.
+- **New Patient**: form with floating labels, segmented control styled to
+  token spec, single screen, keyboard-safe.
+- **Consult**: chat bubbles — Doctor left (white card), Patient right (teal-
+  tinted `#EAF4F3`), speaker chip on first bubble of each run, timestamps
+  subtle. Sticky header: patient name + timer + pulsing record dot. Suggestion
+  cards (item 5) slide in above input area, dismissible.
+- **Review**: transcript continues chat styling; entity summary as a grid of
+  labeled chips (symptoms / duration / history / meds / observations), not a
+  JSON-ish dump. Primary CTA "Analyze".
+- **Diagnosis**: tier sections with SectionHeaders; DifferentialCard = tier
+  border + chip, diagnosis name, 2-line reasoning preview, evidence count
+  badge, accept/dismiss as icon buttons. Red-flags banner pinned top.
+  Suggested workup as checklist card. Evidence modal = bottom sheet: quote
+  blocks with play buttons, guideline excerpt in bordered block with source
+  label.
+
+---
+
+## Build items — locked order
+
+### 0. Design foundation
+- `/src/theme` tokens + the four shared components + skeleton/empty/error
+  patterns. Restyle ALL existing screens to spec above.
+- Accept: side-by-side before/after; no inline colors anywhere; every screen
+  passes the "funded team built this" eyeball test.
+
+### 1. Real speaker diarization
+- Sarvam **Batch API** (sync has no diarization). Keep 7s chunks for live UI;
+  on stop, run batch pass that re-attributes the full transcript.
+- Accept: rehearsed 2-person Hinglish consult → ≥90% lines correctly attributed.
+
+### 2. Audio-mapped linked evidence (THE demo feature)
+- Persist chunks with `(chunkId, startMs, endMs)`; map every `TranscriptLine
+  → (chunkId, offsetMs)`.
+- Tap transcript line → play clip. Evidence bottom-sheet: play button per
+  quote; show ALL contributing evidence per differential.
+- Accept: tap a differential → hear the patient say the triggering symptom.
+
+### 3. Gap detection (post-consult)
+- Compare `StructuredEntities` vs hard-coded febrile-illness checklist
+  (travel, rash, bleeding, urination, hydration, fever pattern, exposure).
+- Type: `{ missedItem, whyItMatters, suggestedQuestion }[]`.
+- Renders as "Not yet ruled out" section, styled to spec.
+- Accept: consult omitting travel history → "Cannot rule out malaria — no
+  travel history asked. Suggested: …"
+
+### 4. Alignment layer (same Gemini call as item 3)
+- Prompt rules verbatim: never grade the doctor; lead with agreement where
+  direction matched guidelines; frame additions as "additionally consider…";
+  second assistant, not teaching doctor.
+- Renders as "Assessment alignment" section below gap detection.
+
+### 5. Near-real-time suggestion cards
+- Every 3–4 chunks (~25s), lightweight Gemini call: accumulated transcript +
+  checklist → 0–2 suggested questions. Dismissible cards, deduped.
+- Latency budget 2–3s. Explicitly NOT WebSocket streaming — roadmap.
+
+### 6. Clinician feedback capture
+- Thumbs up/down + optional comment per differential. Local now, syncs in 7.
+
+### 7. Photo / prior-records input (already coded in gemini.ts)
+- Wire expo-image-picker capture → Supabase storage → base64 inlineData into
+  Call #2. Attachment thumbnails on Review screen.
+- Accept: attaching a relevant image meaningfully changes the differential.
+
+### 8. Backend proxy + persistence
+- Thin API (Hono / Vercel functions) proxying Sarvam + Gemini; all
+  `EXPO_PUBLIC_*` secrets removed from client.
+- Supabase Postgres: patients, consults, transcript_lines, diagnoses,
+  feedback + storage bucket for chunks/attachments. RLS on from day one.
+- Accept: kill and reopen app → patients and past consults survive.
+
+### 9. Ephemeral-audio policy (DPDP posture)
+- Consent capture at consult start (persisted, timestamped). On sign-off:
+  delete raw full audio, retain text + referenced evidence clips only.
+- Document in `RETENTION.md` (one page — pitch asset).
+
+---
+
+## Pitch ledger — what can be SHOWN vs SAID
+
+**SHOW (live in demo):** Hinglish live transcription · tiered cited
+differentials · tap-to-hear linked evidence · red flags · suggested workup ·
+gap detection · alignment · in-consult suggestion cards · photo input ·
+polished UI throughout.
+
+**SAY (roadmap slide, labeled as funded milestones — never imply live):**
+true streaming STT (sub-second suggestions) · fine-tuned open-weight models
+on clinician-validated Hinglish transcripts (the honest "own model" path —
+requires MVP-generated data first) · ABDM / EMR (FHIR) export · prescription
+generation · drug-interaction flagging · multi-specialty · TTS readback.
+
+**NEVER (killed):** dedicated hardware device / mic arrays / jog dials /
+e-ink · edge-offline processing / local LLMs · training an LLM from scratch ·
+US-centric billing codes, prior-auth, trial matching.
+
+Rule: if a panel says "show me that" about anything in SHOW, the app must
+survive it. Anything that can't survive it moves to SAY before the pitch,
+not after.
+
+---
+
+## Demo script (rehearsed only — never improvise the consult)
+1. Landing → Patients → new patient (shows form polish)
+2. Scripted ~90s Hinglish consult, two speakers — suggestion card appears mid-consult
+3. Stop → Review (entity chips) → Analyze → Diagnosis
+4. Tap top differential → bottom sheet → **play the audio clip** ← the moment
+5. "Not yet ruled out" → the malaria / travel-history gap
+6. Alignment section, feedback thumbs, photo attachment if time
+7. Close: "N doctors begin structured feedback pilots [month]" — real number only
+
+## Parallel workstream (non-blocking for items 0–9)
+Verified guidelines: replace the 8 placeholder excerpts with NVBDCP/WHO
+dengue-typhoid-malaria content, clinician-reviewed. Owned by the clinical
+co-founder. Blocks real-doctor pilots, not this build.
+
+## Repo
+`github.com/krishpinto/SecondOpinion`, branch `main`. `.env` gitignored,
+`.env.example` documents vars. Legacy MVP spec superseded by this file.

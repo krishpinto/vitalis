@@ -1,3 +1,8 @@
+// Live consult — records in 7s chunks, transcribes each chunk as it closes,
+// persists every chunk (id, startMs, endMs, uri) so transcript lines stay
+// linked to playable audio evidence, and surfaces in-consult suggestion cards.
+
+import { BlurView } from 'expo-blur';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -5,31 +10,28 @@ import {
   useAudioRecorder,
 } from 'expo-audio';
 import { useRouter } from 'expo-router';
+import { Lightbulb, MessagesSquare, Mic, Square, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
 import { TranscriptView } from '@/components/TranscriptView';
+import { EmptyState, ErrorCard, PrimaryButton, Rise, T } from '@/components/ui';
 import { hasSarvam } from '@/lib/env';
-import { demoLineAt, transcribeChunk } from '@/lib/sarvam';
+import { suggestQuestions } from '@/lib/gemini';
+import { DEMO_LINE_COUNT, demoLineAt, transcribeChunk } from '@/lib/sarvam';
 import { useConsult } from '@/lib/store';
-import type { Speaker, TranscriptLine } from '@/types/clinical';
+import { color, radius, shadow, space } from '@/theme';
+import type { AudioChunk, Speaker, Suggestion, TranscriptLine } from '@/types/clinical';
 
 type Phase = 'idle' | 'recording' | 'finishing';
 
 // How often we close a chunk and send it for transcription (live approximation).
 const CHUNK_MS = 7000;
+// Run the suggestion pass every N completed chunks (~21s).
+const SUGGEST_EVERY_CHUNKS = 3;
 // Pace of the synthetic-demo playback when no Sarvam key is configured.
 const DEMO_MS = 2400;
+const HEADER_HEIGHT = 96;
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
@@ -40,6 +42,7 @@ function fmt(sec: number) {
 export default function ConsultScreen() {
   const router = useRouter();
   const setTranscript = useConsult((s) => s.setTranscript);
+  const setChunks = useConsult((s) => s.setChunks);
   const activePatientId = useConsult((s) => s.activePatientId);
   const patients = useConsult((s) => s.patients);
   const patient = patients.find((p) => p.id === activePatientId) ?? null;
@@ -50,18 +53,25 @@ export default function ConsultScreen() {
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [listening, setListening] = useState(false);
   const [sttError, setSttError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
   const linesRef = useRef<TranscriptLine[]>([]);
+  const chunksRef = useRef<AudioChunk[]>([]);
   const turnRef = useRef(0);
   const seqRef = useRef(0);
+  const chunkSeqRef = useRef(0);
+  const suggestedRef = useRef<string[]>([]);
+  const suggestBusyRef = useRef(false);
   const recordingRef = useRef(false);
+  const recordStartRef = useRef(0);
+  const chunkStartRef = useRef(0);
   const elapsedTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const chunkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const demoIdx = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
 
-  // Pulsing red dot while recording.
+  // Recording indicator — soft opacity pulse, the only looping animation.
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (phase !== 'recording') return;
@@ -82,7 +92,7 @@ export default function ConsultScreen() {
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     return () => clearTimeout(t);
-  }, [lines]);
+  }, [lines, suggestions]);
 
   function clearAllTimers() {
     if (elapsedTimer.current) clearInterval(elapsedTimer.current);
@@ -97,32 +107,58 @@ export default function ConsultScreen() {
   }
 
   // The sync STT endpoint returns no speaker labels, so we assign turns by
-  // alternating Doctor → Patient per chunk. A rough heuristic that reads like a
-  // chat; the review screen can re-diarize accurately with Gemini if needed.
-  function addTurn(text: string) {
+  // alternating Doctor → Patient per chunk. Batch-API diarization is roadmap.
+  function addTurn(text: string, chunkId?: string, startSec?: number) {
     const clean = text.trim();
     if (!clean) return;
     const speaker: Speaker = turnRef.current % 2 === 0 ? 'Doctor' : 'Patient';
     turnRef.current += 1;
-    pushLines([{ id: `c_${++seqRef.current}`, speaker, text: clean }]);
+    pushLines([{ id: `c_${++seqRef.current}`, speaker, text: clean, chunkId, startTime: startSec }]);
+  }
+
+  function showSuggestions(next: Suggestion[]) {
+    const fresh = next.filter((n) => !suggestedRef.current.includes(n.question));
+    if (!fresh.length) return;
+    suggestedRef.current = [...suggestedRef.current, ...fresh.map((f) => f.question)];
+    // Keep at most 2 visible; newest win.
+    setSuggestions((prev) => [...fresh, ...prev].slice(0, 2));
+  }
+
+  function maybeSuggest() {
+    if (suggestBusyRef.current || !recordingRef.current) return;
+    if (linesRef.current.length < 3) return;
+    suggestBusyRef.current = true;
+    suggestQuestions(linesRef.current, suggestedRef.current)
+      .then((s) => {
+        if (recordingRef.current) showSuggestions(s);
+      })
+      .catch((err) => console.warn('[suggest]', err))
+      .finally(() => {
+        suggestBusyRef.current = false;
+      });
   }
 
   async function start() {
     linesRef.current = [];
+    chunksRef.current = [];
+    suggestedRef.current = [];
     turnRef.current = 0;
     seqRef.current = 0;
+    chunkSeqRef.current = 0;
     demoIdx.current = 0;
     setSttError(null);
     setLines([]);
+    setSuggestions([]);
     setElapsed(0);
     setPhase('recording');
+    recordStartRef.current = Date.now();
     elapsedTimer.current = setInterval(() => setElapsed((e) => e + 1), 1000);
 
     if (hasSarvam) {
       try {
         const perm = await requestRecordingPermissionsAsync();
         if (!perm.granted) {
-          Alert.alert('Microphone needed', 'Please allow microphone access to record the consult.');
+          setSttError('Microphone access is needed to record the consult. Allow it in Settings, then retry.');
           clearAllTimers();
           setPhase('idle');
           return;
@@ -131,9 +167,10 @@ export default function ConsultScreen() {
         recordingRef.current = true;
         await recorder.prepareToRecordAsync();
         recorder.record();
+        chunkStartRef.current = 0;
         scheduleChunk();
       } catch (err) {
-        Alert.alert('Recording error', String(err));
+        setSttError(String(err));
         clearAllTimers();
         setPhase('idle');
       }
@@ -141,9 +178,44 @@ export default function ConsultScreen() {
       // Demo: reveal the synthetic consult line-by-line so it looks live.
       demoTimer.current = setInterval(() => {
         const line = demoLineAt(demoIdx.current++);
-        if (line) pushLines([line]);
-        else if (demoTimer.current) clearInterval(demoTimer.current);
+        if (line) {
+          pushLines([{ ...line, startTime: (demoIdx.current - 1) * (DEMO_MS / 1000) }]);
+          // Mid-consult, surface the scripted travel-history suggestion.
+          if (demoIdx.current === Math.floor(DEMO_LINE_COUNT / 2)) maybeSuggest();
+        } else if (demoTimer.current) clearInterval(demoTimer.current);
       }, DEMO_MS);
+      recordingRef.current = true;
+    }
+  }
+
+  /** Stop the current recorder file, register it as a chunk, transcribe it. */
+  async function closeChunk(restart: boolean) {
+    await recorder.stop();
+    const uri = recorder.uri;
+    const nowMs = Date.now() - recordStartRef.current;
+    if (restart) {
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+    }
+    if (!uri) return;
+
+    const chunk: AudioChunk = {
+      id: `ch_${++chunkSeqRef.current}`,
+      uri,
+      startMs: chunkStartRef.current,
+      endMs: nowMs,
+    };
+    chunkStartRef.current = nowMs;
+    chunksRef.current = [...chunksRef.current, chunk];
+
+    setListening(true);
+    try {
+      const text = await transcribeChunk(uri);
+      addTurn(text, chunk.id, chunk.startMs / 1000);
+      if (text) setSttError(null);
+      if (chunkSeqRef.current % SUGGEST_EVERY_CHUNKS === 0) maybeSuggest();
+    } finally {
+      setListening(false);
     }
   }
 
@@ -151,26 +223,10 @@ export default function ConsultScreen() {
     chunkTimer.current = setTimeout(async () => {
       if (!recordingRef.current) return;
       try {
-        await recorder.stop();
-        const uri = recorder.uri;
-        // Restart immediately to keep capturing the conversation.
-        await recorder.prepareToRecordAsync();
-        recorder.record();
-        if (uri) {
-          setListening(true);
-          transcribeChunk(uri)
-            .then((text) => {
-              addTurn(text);
-              if (text) setSttError(null);
-            })
-            .catch((err) => {
-              console.warn('[STT chunk]', err);
-              setSttError(String(err));
-            })
-            .finally(() => setListening(false));
-        }
-      } catch {
-        // Ignore a single dropped chunk; keep the loop alive.
+        await closeChunk(true);
+      } catch (err) {
+        console.warn('[STT chunk]', err);
+        setSttError(String(err));
       }
       if (recordingRef.current) scheduleChunk();
     }, CHUNK_MS);
@@ -178,15 +234,12 @@ export default function ConsultScreen() {
 
   async function stop() {
     setPhase('finishing');
+    const wasLive = hasSarvam && recordingRef.current;
     recordingRef.current = false;
     clearAllTimers();
 
     try {
-      if (hasSarvam) {
-        await recorder.stop();
-        const uri = recorder.uri;
-        if (uri) addTurn(await transcribeChunk(uri));
-      }
+      if (wasLive) await closeChunk(false);
     } catch (err) {
       console.warn('[STT final]', err);
       setSttError(String(err));
@@ -194,11 +247,12 @@ export default function ConsultScreen() {
 
     const finalLines = linesRef.current;
     if (finalLines.length === 0) {
-      Alert.alert('No speech captured', 'Nothing was transcribed — please try recording again.');
+      setSttError('Nothing was transcribed — please try recording again.');
       setPhase('idle');
       return;
     }
 
+    setChunks(chunksRef.current);
     setTranscript({ lines: finalLines, languageCode: 'hi-IN', isDemo: !hasSarvam });
     router.replace('/review');
   }
@@ -207,81 +261,107 @@ export default function ConsultScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Status header */}
-      <View style={styles.header}>
-        {patient && (
-          <View style={styles.patientRow}>
-            <ThemedText type="smallBold" style={styles.patientName}>
-              {patient.name}
-            </ThemedText>
-            <ThemedText type="small" style={styles.patientMeta}>
-              {[patient.age && `${patient.age}y`, patient.sex].filter(Boolean).join(' · ')}
-            </ThemedText>
-          </View>
-        )}
-        <View style={styles.statusRow}>
-          <Animated.View style={[styles.dot, { opacity: recording ? pulse : 1, backgroundColor: recording ? '#DC2626' : '#94A3B8' }]} />
-          <ThemedText type="smallBold" style={styles.statusText}>
-            {phase === 'finishing' ? 'Finishing…' : recording ? 'Recording' : 'Ready'}
-          </ThemedText>
-          <ThemedText style={styles.timer}>{fmt(elapsed)}</ThemedText>
-        </View>
-        <ThemedText type="small" style={styles.sub}>
-          {listening
-            ? 'Transcribing…'
-            : recording
-              ? 'Live transcript — Doctor & Patient'
-              : hasSarvam
-                ? 'Tap start to begin the consult'
-                : 'Demo mode — synthetic consult'}
-        </ThemedText>
-      </View>
-
-      {sttError && (
-        <View style={styles.errorBanner}>
-          <ThemedText type="small" style={styles.errorText} numberOfLines={2}>
-            Transcription error: {sttError}
-          </ThemedText>
-        </View>
-      )}
-
-      {/* Live transcript */}
-      <ScrollView ref={scrollRef} style={styles.chat} contentContainerStyle={styles.chatContent}>
-        {lines.length === 0 ? (
-          <View style={styles.emptyState}>
-            <ThemedText style={styles.emptyIcon}>🩺</ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.emptyText}>
-              The conversation will appear here, labelled by speaker, as you talk.
-            </ThemedText>
+      {/* Chat scrolls beneath the glass header */}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.chat}
+        contentContainerStyle={[styles.chatContent, { paddingTop: HEADER_HEIGHT + space.l }]}>
+        {sttError && <ErrorCard message={sttError} onRetry={recording ? undefined : start} />}
+        {lines.length === 0 && !sttError ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon={MessagesSquare}
+              text={
+                recording
+                  ? 'Listening — the conversation will appear here, labelled by speaker.'
+                  : 'Start recording and the consult will appear here, labelled by speaker.'
+              }
+            />
           </View>
         ) : (
-          <TranscriptView lines={lines} />
+          <TranscriptView lines={lines} chunks={chunksRef.current} />
         )}
         {recording && listening && (
-          <View style={styles.typingRow}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <ThemedText type="small" themeColor="textSecondary">
-              transcribing latest…
-            </ThemedText>
-          </View>
+          <T variant="caption" tone="faint" style={styles.listeningNote}>
+            transcribing latest…
+          </T>
         )}
       </ScrollView>
+
+      {/* Glass surface #1 — consult sticky header */}
+      <BlurView intensity={40} tint="light" style={styles.header}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <T variant="secondary" style={styles.patientName} numberOfLines={1}>
+              {patient?.name ?? 'Consult'}
+            </T>
+            <T variant="caption" tone="secondary">
+              {patient
+                ? [patient.age && `${patient.age}y`, patient.sex].filter(Boolean).join(' · ')
+                : hasSarvam
+                  ? 'Live consult'
+                  : 'Demo mode — synthetic consult'}
+            </T>
+          </View>
+          <View style={styles.statusRow}>
+            <Animated.View
+              style={[
+                styles.dot,
+                {
+                  opacity: recording ? pulse : 1,
+                  backgroundColor: recording ? color.recording : color.inkFaint,
+                },
+              ]}
+            />
+            <T variant="body" style={styles.timer}>
+              {fmt(elapsed)}
+            </T>
+          </View>
+        </View>
+        <T variant="caption" tone="faint">
+          {phase === 'finishing' ? 'Finishing…' : recording ? 'Recording — Doctor & Patient' : 'Ready'}
+        </T>
+      </BlurView>
+
+      {/* Glass surface #3 — in-consult suggestion cards, above the input area */}
+      {suggestions.length > 0 && (
+        <View style={styles.suggestWrap} pointerEvents="box-none">
+          {suggestions.map((s, i) => (
+            <Rise key={s.id} index={i}>
+              <BlurView intensity={24} tint="light" style={styles.suggestCard}>
+                <View style={styles.suggestIcon}>
+                  <Lightbulb size={16} color={color.accent} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T variant="secondary" style={styles.suggestQuestion}>
+                    {s.question}
+                  </T>
+                  {!!s.rationale && (
+                    <T variant="caption" tone="secondary">
+                      {s.rationale}
+                    </T>
+                  )}
+                </View>
+                <Pressable
+                  onPress={() => setSuggestions((prev) => prev.filter((x) => x.id !== s.id))}
+                  hitSlop={8}
+                  accessibilityRole="button">
+                  <X size={16} color={color.inkFaint} strokeWidth={2} />
+                </Pressable>
+              </BlurView>
+            </Rise>
+          ))}
+        </View>
+      )}
 
       {/* Controls */}
       <View style={styles.footer}>
         {phase === 'finishing' ? (
-          <View style={[styles.btn, styles.finishing]}>
-            <ActivityIndicator color="#fff" />
-          </View>
+          <PrimaryButton label="Finishing…" onPress={() => {}} loading />
+        ) : recording ? (
+          <PrimaryButton label="Stop & review" onPress={stop} icon={Square} variant="danger" />
         ) : (
-          <Pressable
-            style={[styles.btn, recording ? styles.stopBtn : styles.recordBtn]}
-            onPress={recording ? stop : start}
-            accessibilityRole="button">
-            <ThemedText type="smallBold" style={styles.btnText}>
-              {recording ? '■  Stop & Review' : '●  Start Recording'}
-            </ThemedText>
-          </Pressable>
+          <PrimaryButton label="Start recording" onPress={start} icon={Mic} />
         )}
       </View>
     </View>
@@ -289,40 +369,56 @@ export default function ConsultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F8FC' },
+  container: { flex: 1, backgroundColor: color.bg },
   header: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
+    paddingHorizontal: space.xl,
+    paddingTop: space.l,
+    gap: space.xs,
+    backgroundColor: color.glassHeader,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5EAF1',
-    gap: 4,
+    borderBottomColor: color.border,
+    overflow: 'hidden',
   },
-  patientRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 },
-  patientName: { fontSize: 16, color: '#0F172A' },
-  patientMeta: { color: '#64748B' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  statusText: { fontSize: 14, color: '#0F172A' },
-  timer: { marginLeft: 'auto', fontSize: 16, fontWeight: '700', color: '#0F172A', fontVariant: ['tabular-nums'] },
-  sub: { color: '#64748B' },
-  errorBanner: { backgroundColor: '#FEF2F2', paddingHorizontal: 20, paddingVertical: 8 },
-  errorText: { color: '#B91C1C' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.l },
+  patientName: { fontWeight: '600' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
+  dot: { width: 10, height: 10, borderRadius: radius.chip },
+  timer: { fontVariant: ['tabular-nums'], fontWeight: '600' },
   chat: { flex: 1 },
-  chatContent: { padding: 16, paddingBottom: 24, flexGrow: 1 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 44 },
-  emptyText: { textAlign: 'center', lineHeight: 22 },
-  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 8, paddingTop: 10 },
-  footer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5EAF1',
+  chatContent: { paddingHorizontal: space.l, paddingBottom: space.xl, gap: space.m, flexGrow: 1 },
+  emptyWrap: { flex: 1, justifyContent: 'center' },
+  listeningNote: { paddingLeft: space.s },
+  suggestWrap: { paddingHorizontal: space.l, paddingBottom: space.s, gap: space.s },
+  suggestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.m,
+    backgroundColor: color.glassCard,
+    borderRadius: radius.card,
+    padding: space.l,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    ...shadow,
   },
-  btn: { paddingVertical: 16, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  recordBtn: { backgroundColor: '#DC2626' },
-  stopBtn: { backgroundColor: '#0F172A' },
-  finishing: { backgroundColor: '#0F172A' },
-  btnText: { color: '#fff', fontSize: 16 },
+  suggestIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.chip,
+    backgroundColor: color.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestQuestion: { fontWeight: '600' },
+  footer: {
+    padding: space.l,
+    backgroundColor: color.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+  },
 });

@@ -3,13 +3,16 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+import { checklistPromptBlock } from './checklist';
 import { ENV, hasGemini } from './env';
 import { GUIDELINES } from './guidelines';
 import type {
   Attachment,
   DiagnosisResult,
   StructuredEntities,
+  Suggestion,
   Transcript,
+  TranscriptLine,
 } from '@/types/clinical';
 
 const MODEL = 'gemini-2.5-flash';
@@ -76,11 +79,16 @@ You are providing a structured second-opinion draft for a licensed doctor to rev
 GUIDELINES:
 ${GUIDELINES}
 
+HISTORY CHECKLIST (acute febrile illness — every item should have been covered in the consult):
+${checklistPromptBlock()}
+
 RULES:
 - Every differential you suggest must cite a specific line from the transcript AND a specific line from the guidelines above.
 - Output ONLY valid JSON matching the schema provided. No prose, no markdown, no explanation outside the JSON.
 - If you cannot ground a suggestion in both the transcript and the guidelines, do not include it.
 - Always include a cant_miss tier even if probability is low.
+- "gaps": compare the consult against the HISTORY CHECKLIST. For each checklist item that was NOT covered in the consult, add one gap entry: what was missed, why it matters for dengue/typhoid/malaria specifically, and one exact question the doctor could ask. Include only genuinely uncovered items. Empty array if everything was covered.
+- "alignment": you are a second assistant, not a teaching doctor. NEVER grade, score, or criticise the doctor. "agreement" must lead with where the doctor's direction already matched the guidelines (tests ordered, questions asked, advice given) — be specific. "additional_considerations" are framed strictly as "additionally consider ..." suggestions, never as corrections or omissions.
 
 SCHEMA:
 {
@@ -94,7 +102,14 @@ SCHEMA:
     }
   ],
   "suggested_workup": string[],
-  "red_flags": string[]
+  "red_flags": string[],
+  "gaps": [
+    { "missedItem": string, "whyItMatters": string, "suggestedQuestion": string }
+  ],
+  "alignment": {
+    "agreement": string,
+    "additional_considerations": string[]
+  }
 }`;
 
 function demoDiagnosis(): DiagnosisResult {
@@ -131,11 +146,43 @@ function demoDiagnosis(): DiagnosisResult {
     ],
     suggested_workup: ['CBC with platelet count', 'Dengue NS1 antigen (day 1-5)', 'Malaria smear / rapid antigen test', 'Blood culture if fever persists >1 week'],
     red_flags: ['Persistent vomiting', 'Petechiae / risk of mucosal bleeding', 'Monitor for shock around day 4-6 defervescence'],
+    gaps: [
+      {
+        missedItem: 'Travel history',
+        whyItMatters: 'Cannot rule out malaria — recent travel to an endemic area sharply changes its probability, and no travel history was asked.',
+        suggestedQuestion: 'Pichhle kuch hafton mein aap kahin bahar gaye the — gaon ya kisi aur sheher?',
+      },
+      {
+        missedItem: 'Urine output',
+        whyItMatters: 'Reduced urine output is an early sign of dehydration or impending shock in dengue.',
+        suggestedQuestion: 'Peshab pehle jitna hi ho raha hai, ya kam ho gaya hai?',
+      },
+    ],
+    alignment: {
+      agreement:
+        'Ordering a platelet count and dengue test matches the guideline pathway for fever with petechiae, and screening for bleeding gums covered a key warning sign.',
+      additional_considerations: [
+        'Additionally consider a malaria smear in the same draw, given chills with rigors.',
+        'Additionally consider advising a return visit at defervescence (day 4-6), when dengue shock risk peaks.',
+      ],
+    },
+  };
+}
+
+/** Fill any fields the model omitted so screens never see undefined. */
+function normalizeDiagnosis(raw: Partial<DiagnosisResult>): DiagnosisResult {
+  return {
+    differentials: raw.differentials ?? [],
+    suggested_workup: raw.suggested_workup ?? [],
+    red_flags: raw.red_flags ?? [],
+    gaps: raw.gaps ?? [],
+    alignment: raw.alignment ?? { agreement: '', additional_considerations: [] },
   };
 }
 
 export async function reasonDifferentials(
   entities: StructuredEntities,
+  transcript: Transcript | null,
   attachments: Attachment[] = []
 ): Promise<DiagnosisResult> {
   if (!hasGemini) {
@@ -143,11 +190,68 @@ export async function reasonDifferentials(
     return demoDiagnosis();
   }
 
+  const sections = [
+    `${REASONING_SYSTEM}\n\nSTRUCTURED ENTITIES:\n${JSON.stringify(entities, null, 2)}`,
+    transcript ? `FULL TRANSCRIPT (for exact citations and gap detection):\n${transcriptToText(transcript)}` : '',
+  ].filter(Boolean);
+
   const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-    { text: `${REASONING_SYSTEM}\n\nSTRUCTURED ENTITIES:\n${JSON.stringify(entities, null, 2)}` },
+    { text: sections.join('\n\n') },
     ...attachments.map((a) => ({ inlineData: { mimeType: a.mimeType, data: a.base64 } })),
   ];
 
   const res = await client().generateContent(parts);
-  return parseJson<DiagnosisResult>(res.response.text());
+  return normalizeDiagnosis(parseJson<Partial<DiagnosisResult>>(res.response.text()));
+}
+
+// ---------------------------------------------------------------------------
+// Call #3 — in-consult suggestion cards (item 5). Lightweight, every ~25s.
+// ---------------------------------------------------------------------------
+
+const SUGGESTION_PROMPT = `You are a silent second assistant listening to an ongoing doctor-patient consult for acute febrile illness (dengue / typhoid / malaria).
+Given the transcript so far and this history checklist:
+
+${checklistPromptBlock()}
+
+Suggest AT MOST 2 short questions the doctor has not yet asked that would most change the differential right now. Prefer checklist items not yet covered. Do not repeat anything already asked, and do not include any of the ALREADY SUGGESTED questions.
+Output ONLY valid JSON, no markdown: { "suggestions": [ { "question": string, "rationale": string } ] }
+"question" is phrased naturally for an Indian OPD (Hinglish is fine). "rationale" is one short clause (e.g. "rules out malaria"). Return an empty array if nothing is worth asking yet.`;
+
+let suggestionCounter = 0;
+
+/** Synthetic suggestion used in demo mode — mirrors the travel-history gap. */
+function demoSuggestions(): Suggestion[] {
+  return [
+    {
+      id: `sg_${++suggestionCounter}`,
+      question: 'Recent travel? — "Pichhle kuch hafton mein kahin bahar gaye the?"',
+      rationale: 'Rules out malaria — travel history not yet asked.',
+    },
+  ];
+}
+
+export async function suggestQuestions(
+  lines: TranscriptLine[],
+  alreadySuggested: string[]
+): Promise<Suggestion[]> {
+  if (!hasGemini) {
+    await new Promise((r) => setTimeout(r, 600));
+    return demoSuggestions();
+  }
+
+  const transcriptText = lines.map((l) => `${l.speaker}: ${l.text}`).join('\n');
+  const prompt = `${SUGGESTION_PROMPT}\n\nALREADY SUGGESTED:\n${alreadySuggested.map((q) => `- ${q}`).join('\n') || '(none)'}\n\nTRANSCRIPT SO FAR:\n${transcriptText}`;
+
+  const res = await client().generateContent(prompt);
+  const parsed = parseJson<{ suggestions?: { question?: string; rationale?: string }[] }>(
+    res.response.text()
+  );
+  return (parsed.suggestions ?? [])
+    .filter((s) => s.question)
+    .slice(0, 2)
+    .map((s) => ({
+      id: `sg_${++suggestionCounter}`,
+      question: s.question!,
+      rationale: s.rationale ?? '',
+    }));
 }

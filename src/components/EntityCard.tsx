@@ -1,42 +1,46 @@
-// Structured entity summary card (Gemini Call #1 output).
+// Structured entity summary (Gemini Call #1 output) — a grid of labeled chips,
+// not a JSON-ish dump.
 
+import { Clock, Eye, History, Pill, Thermometer } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { Card, Chip, T } from '@/components/ui';
+import { color, space } from '@/theme';
 import type { StructuredEntities } from '@/types/clinical';
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function ChipGroup({ title, icon, items }: { title: string; icon: LucideIcon; items: string[] }) {
   if (!items.length) return null;
   return (
-    <View style={styles.section}>
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.heading}>
+    <View style={styles.group}>
+      <T variant="caption" tone="secondary" style={styles.groupLabel}>
         {title.toUpperCase()}
-      </ThemedText>
-      {items.map((item, i) => (
-        <ThemedText key={i} style={styles.item}>
-          • {item}
-        </ThemedText>
-      ))}
+      </T>
+      <View style={styles.chips}>
+        {items.map((item, i) => (
+          <Chip key={i} label={item} icon={icon} tint={color.ink} soft={color.bg} style={styles.chip} />
+        ))}
+      </View>
     </View>
   );
 }
 
 export function EntityCard({ entities }: { entities: StructuredEntities }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <Section title="Symptoms" items={entities.symptoms} />
-      <Section title="Duration" items={entities.duration ? [entities.duration] : []} />
-      <Section title="History" items={entities.history} />
-      <Section title="Medications" items={entities.medications} />
-      <Section title="Doctor observations" items={entities.doctor_observations} />
-    </ThemedView>
+    <Card style={styles.card}>
+      <ChipGroup title="Symptoms" icon={Thermometer} items={entities.symptoms} />
+      <ChipGroup title="Duration" icon={Clock} items={entities.duration ? [entities.duration] : []} />
+      <ChipGroup title="History" icon={History} items={entities.history} />
+      <ChipGroup title="Medications" icon={Pill} items={entities.medications} />
+      <ChipGroup title="Doctor observations" icon={Eye} items={entities.doctor_observations} />
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, padding: 16, gap: 14 },
-  section: { gap: 4 },
-  heading: { letterSpacing: 0.5, fontSize: 11 },
-  item: { fontSize: 15, lineHeight: 21 },
+  card: { gap: space.l },
+  group: { gap: space.s },
+  groupLabel: { fontWeight: '600', letterSpacing: 0.6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
+  chip: { paddingVertical: space.s },
 });

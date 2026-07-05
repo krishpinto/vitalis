@@ -1,7 +1,17 @@
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+// Landing — full-bleed calm intro: product name, one-line value prop, one CTA.
 
-import { ThemedText } from '@/components/themed-text';
+import { useRouter } from 'expo-router';
+import { AudioLines, FileSearch, Quote, Stethoscope } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { PrimaryButton, Rise, T } from '@/components/ui';
+import { color, radius, space } from '@/theme';
+
+const FEATURES = [
+  { icon: AudioLines, text: 'Live Hinglish transcript, labelled by speaker' },
+  { icon: FileSearch, text: 'Tiered differential draft, every claim cited' },
+  { icon: Quote, text: 'Tap any suggestion to hear the patient say it' },
+];
 
 export default function LandingScreen() {
   const router = useRouter();
@@ -9,85 +19,79 @@ export default function LandingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <View style={styles.logo}>
-          <ThemedText style={styles.logoMark}>🩺</ThemedText>
-        </View>
-        <View style={styles.badge}>
-          <ThemedText type="smallBold" style={styles.badgeText}>
-            CLINICAL DECISION SUPPORT
-          </ThemedText>
-        </View>
-        <ThemedText style={styles.title}>Second Opinion</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Ambient consult transcription and a cited differential-diagnosis draft — for licensed
-          doctors, on every patient.
-        </ThemedText>
+        <Rise index={0}>
+          <View style={styles.logo}>
+            <Stethoscope size={30} color={color.accent} strokeWidth={1.8} />
+          </View>
+        </Rise>
+        <Rise index={1}>
+          <T variant="title" style={styles.title}>
+            Second Opinion
+          </T>
+        </Rise>
+        <Rise index={2}>
+          <T variant="body" tone="secondary" style={styles.subtitle}>
+            AI scribes write down what happened.{'\n'}We catch what didn't.
+          </T>
+        </Rise>
       </View>
 
       <View style={styles.features}>
-        {[
-          { icon: '🎙️', text: 'Live Hinglish transcript, labelled by speaker' },
-          { icon: '🧠', text: 'Structured summary + cited differentials' },
-          { icon: '✍️', text: 'Draft only — you review and sign off' },
-        ].map((f, i) => (
-          <View key={i} style={styles.feature}>
-            <ThemedText style={styles.featureIcon}>{f.icon}</ThemedText>
-            <ThemedText style={styles.featureText}>{f.text}</ThemedText>
-          </View>
+        {FEATURES.map((f, i) => (
+          <Rise key={i} index={3 + i}>
+            <View style={styles.feature}>
+              <View style={styles.featureIcon}>
+                <f.icon size={18} color={color.accent} strokeWidth={2} />
+              </View>
+              <T variant="secondary" style={styles.featureText}>
+                {f.text}
+              </T>
+            </View>
+          </Rise>
         ))}
       </View>
 
       <View style={styles.bottom}>
-        <Pressable style={styles.cta} onPress={() => router.push('/patients')} accessibilityRole="button">
-          <ThemedText type="smallBold" style={styles.ctaText}>
-            Get Started
-          </ThemedText>
-        </Pressable>
-        <ThemedText type="small" style={styles.footnote}>
-          Demo build · synthetic patients only
-        </ThemedText>
+        <PrimaryButton label="Get started" onPress={() => router.push('/patients')} />
+        <T variant="caption" tone="faint" style={styles.footnote}>
+          A draft for the doctor to review and sign off — never a diagnosis.
+        </T>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 28, justifyContent: 'center', backgroundColor: '#F5F8FC' },
-  hero: { gap: 14, alignItems: 'flex-start' },
+  container: {
+    flex: 1,
+    backgroundColor: color.bg,
+    padding: space.xl,
+    paddingBottom: space.xxl,
+    justifyContent: 'center',
+    gap: space.xxl,
+  },
+  hero: { gap: space.l, alignItems: 'flex-start' },
   logo: {
     width: 64,
     height: 64,
-    borderRadius: 18,
-    backgroundColor: '#E0EDFF',
+    borderRadius: radius.card,
+    backgroundColor: color.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoMark: { fontSize: 32 },
-  badge: {
-    backgroundColor: '#E0EDFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  badgeText: { color: '#1D4ED8', fontSize: 11, letterSpacing: 0.6 },
-  title: { fontSize: 36, lineHeight: 42, fontWeight: '800', color: '#0F172A' },
-  subtitle: { fontSize: 16, lineHeight: 24, color: '#475569' },
-  features: { gap: 16 },
-  feature: { flexDirection: 'row', gap: 14, alignItems: 'center' },
-  featureIcon: { fontSize: 22, width: 28, textAlign: 'center' },
-  featureText: { flex: 1, fontSize: 15, color: '#1E293B', lineHeight: 21 },
-  bottom: { gap: 12 },
-  cta: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 17,
-    borderRadius: 14,
+  title: { fontSize: 34, lineHeight: 41 },
+  subtitle: { fontSize: 18, lineHeight: 27 },
+  features: { gap: space.l },
+  feature: { flexDirection: 'row', gap: space.m, alignItems: 'center' },
+  featureIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.chip,
+    backgroundColor: color.accentSoft,
     alignItems: 'center',
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    justifyContent: 'center',
   },
-  ctaText: { color: '#fff', fontSize: 16 },
-  footnote: { textAlign: 'center', color: '#94A3B8' },
+  featureText: { flex: 1 },
+  bottom: { gap: space.m },
+  footnote: { textAlign: 'center' },
 });

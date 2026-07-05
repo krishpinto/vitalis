@@ -1,85 +1,155 @@
-// Diarized transcript rendered as a clean, clinical chat — Doctor on the left,
-// Patient on the right. Used both live (during recording) and on the review screen.
+// Diarized transcript as a clinical chat — Doctor left (white card), Patient
+// right (teal-tinted). Speaker chip on the first bubble of each run. When a
+// line is backed by a recorded audio chunk, tapping the bubble plays the clip.
 
-import { StyleSheet, View } from 'react-native';
+import { Play, Square } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from './themed-text';
-import type { Speaker, TranscriptLine } from '@/types/clinical';
+import { T } from './ui';
+import { onPlaybackChange, playClip } from '@/lib/audio';
+import { chunkForLine } from '@/lib/evidence';
+import { color, radius, shadow, space } from '@/theme';
+import type { AudioChunk, Speaker, TranscriptLine } from '@/types/clinical';
 
-const SPEAKER_STYLE: Record<
-  Speaker,
-  { name: string; accent: string; bubble: string; text: string; avatarBg: string; initial: string }
-> = {
-  Doctor: { name: 'Doctor', accent: '#1D4ED8', bubble: '#EAF2FF', text: '#12285B', avatarBg: '#2563EB', initial: 'D' },
-  Patient: { name: 'Patient', accent: '#047857', bubble: '#E7F8F0', text: '#0A4A38', avatarBg: '#059669', initial: 'P' },
-  Unknown: { name: 'Speaker', accent: '#64748B', bubble: '#F1F5F9', text: '#334155', avatarBg: '#94A3B8', initial: '•' },
+const SPEAKER_META: Record<Speaker, { name: string; bubble: string }> = {
+  Doctor: { name: 'Doctor', bubble: color.card },
+  Patient: { name: 'Patient', bubble: color.accentSoft },
+  Unknown: { name: 'Speaker', bubble: color.card },
 };
 
-function Avatar({ speaker }: { speaker: Speaker }) {
-  const s = SPEAKER_STYLE[speaker];
-  return (
-    <View style={[styles.avatar, { backgroundColor: s.avatarBg }]}>
-      <ThemedText style={styles.avatarText}>{s.initial}</ThemedText>
-    </View>
-  );
+function fmtTime(sec?: number) {
+  if (sec === undefined) return null;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export function ChatBubble({ line, showName }: { line: TranscriptLine; showName: boolean }) {
-  const s = SPEAKER_STYLE[line.speaker];
+export function ChatBubble({
+  line,
+  showName,
+  clipUri,
+  playing,
+}: {
+  line: TranscriptLine;
+  showName: boolean;
+  /** Audio chunk URI backing this line, when available. */
+  clipUri?: string;
+  playing?: boolean;
+}) {
+  const meta = SPEAKER_META[line.speaker];
   const isPatient = line.speaker === 'Patient';
-  return (
-    <View style={[styles.row, isPatient ? styles.rowRight : styles.rowLeft]}>
-      {!isPatient && <Avatar speaker={line.speaker} />}
-      <View style={[styles.stack, { alignItems: isPatient ? 'flex-end' : 'flex-start' }]}>
-        {showName && (
-          <ThemedText type="smallBold" style={[styles.name, { color: s.accent }]}>
-            {s.name}
-          </ThemedText>
+  const time = fmtTime(line.startTime);
+
+  const bubble = (
+    <View
+      style={[
+        styles.bubble,
+        { backgroundColor: meta.bubble },
+        isPatient ? styles.bubbleRight : styles.bubbleLeft,
+      ]}>
+      <View style={styles.bubbleInner}>
+        {clipUri && (
+          <View style={styles.playIcon}>
+            {playing ? (
+              <Square size={12} color={color.accent} fill={color.accent} strokeWidth={2} />
+            ) : (
+              <Play size={12} color={color.accent} fill={color.accent} strokeWidth={2} />
+            )}
+          </View>
         )}
-        <View
-          style={[
-            styles.bubble,
-            { backgroundColor: s.bubble },
-            isPatient ? styles.bubbleRight : styles.bubbleLeft,
-          ]}>
-          <ThemedText style={[styles.bubbleText, { color: s.text }]}>{line.text}</ThemedText>
-        </View>
+        <T variant="secondary" style={styles.bubbleText}>
+          {line.text}
+        </T>
       </View>
-      {isPatient && <Avatar speaker={line.speaker} />}
+    </View>
+  );
+
+  return (
+    <View style={[styles.row, { alignItems: isPatient ? 'flex-end' : 'flex-start' }]}>
+      {showName && (
+        <View style={styles.nameRow}>
+          <T variant="caption" tone="accent" style={styles.name}>
+            {meta.name}
+          </T>
+          {time && (
+            <T variant="caption" tone="faint">
+              {time}
+            </T>
+          )}
+        </View>
+      )}
+      {clipUri ? (
+        <Pressable
+          onPress={() => playClip(clipUri)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.bubbleWrap, pressed && styles.pressed]}>
+          {bubble}
+        </Pressable>
+      ) : (
+        <View style={styles.bubbleWrap}>{bubble}</View>
+      )}
     </View>
   );
 }
 
-export function TranscriptView({ lines }: { lines: TranscriptLine[] }) {
+export function TranscriptView({
+  lines,
+  chunks = [],
+}: {
+  lines: TranscriptLine[];
+  chunks?: AudioChunk[];
+}) {
+  const [playingUri, setPlayingUri] = useState<string | null>(null);
+  useEffect(() => onPlaybackChange(setPlayingUri), []);
+
   return (
     <View style={styles.container}>
-      {lines.map((line, i) => (
-        <ChatBubble key={line.id} line={line} showName={lines[i - 1]?.speaker !== line.speaker} />
-      ))}
+      {lines.map((line, i) => {
+        const clip = chunkForLine(line, chunks);
+        return (
+          <ChatBubble
+            key={line.id}
+            line={line}
+            showName={lines[i - 1]?.speaker !== line.speaker}
+            clipUri={clip?.uri}
+            playing={!!clip && playingUri === clip.uri}
+          />
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  rowLeft: { justifyContent: 'flex-start' },
-  rowRight: { justifyContent: 'flex-end' },
-  stack: { maxWidth: '82%', gap: 3 },
-  name: { fontSize: 12, paddingHorizontal: 2 },
-  avatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  bubble: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+  container: { gap: space.s },
+  row: { gap: space.xs },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: space.s,
+    paddingHorizontal: space.xs,
+    marginTop: space.s,
   },
-  bubbleLeft: { borderBottomLeftRadius: 5 },
-  bubbleRight: { borderBottomRightRadius: 5 },
-  bubbleText: { fontSize: 15, lineHeight: 21 },
+  name: { fontWeight: '600' },
+  bubbleWrap: { maxWidth: '84%' },
+  pressed: { transform: [{ scale: 0.98 }] },
+  bubble: {
+    paddingVertical: space.m,
+    paddingHorizontal: space.l,
+    borderRadius: radius.card,
+    ...shadow,
+  },
+  bubbleLeft: { borderBottomLeftRadius: radius.button / 2 },
+  bubbleRight: { borderBottomRightRadius: radius.button / 2 },
+  bubbleInner: { flexDirection: 'row', alignItems: 'center', gap: space.s },
+  playIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.chip,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleText: { flexShrink: 1 },
 });

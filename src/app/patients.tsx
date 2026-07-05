@@ -1,8 +1,13 @@
+// Patients — list of patient cards with avatar initials, meta line, and a FAB
+// for adding a new patient.
+
 import { useRouter } from 'expo-router';
+import { Plus, Users } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
+import { Card, EmptyState, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
+import { color, radius, shadow, space } from '@/theme';
 import type { Patient } from '@/types/clinical';
 
 function initials(name: string) {
@@ -12,13 +17,6 @@ function initials(name: string) {
     .slice(0, 2)
     .join('')
     .toUpperCase();
-}
-
-const AVATAR_COLORS = ['#2563EB', '#059669', '#7C3AED', '#DB2777', '#D97706', '#0891B2'];
-function colorFor(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[h];
 }
 
 export default function PatientsScreen() {
@@ -36,98 +34,85 @@ export default function PatientsScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <ThemedText style={styles.heading}>Select a patient</ThemedText>
-        <ThemedText style={styles.subheading}>Choose an existing patient or add a new one.</ThemedText>
+        <T variant="title">Patients</T>
+        <T variant="secondary" tone="secondary">
+          Choose a patient to start a consult.
+        </T>
 
-        <Pressable style={styles.newBtn} onPress={() => router.push('/new-patient')} accessibilityRole="button">
-          <View style={styles.plusCircle}>
-            <ThemedText style={styles.plus}>＋</ThemedText>
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="smallBold" style={styles.newTitle}>
-              New Patient
-            </ThemedText>
-            <ThemedText type="small" style={styles.newSub}>
-              Start a fresh record
-            </ThemedText>
-          </View>
-        </Pressable>
+        <SectionHeader title="Recent" />
 
-        <ThemedText type="smallBold" style={styles.sectionLabel}>
-          RECENT PATIENTS
-        </ThemedText>
-
-        {patients.map((p) => (
-          <Pressable key={p.id} style={styles.card} onPress={() => openConsult(p)} accessibilityRole="button">
-            <View style={[styles.avatar, { backgroundColor: colorFor(p.id) }]}>
-              <ThemedText style={styles.avatarText}>{initials(p.name)}</ThemedText>
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="smallBold" style={styles.name}>
-                {p.name}
-              </ThemedText>
-              <ThemedText type="small" style={styles.meta}>
-                {[p.age && `${p.age}y`, p.sex].filter(Boolean).join(' · ')}
-                {p.complaint ? `  ·  ${p.complaint}` : ''}
-              </ThemedText>
-            </View>
-            <View style={styles.right}>
-              {p.lastVisit && (
-                <ThemedText type="small" style={styles.visit}>
-                  {p.lastVisit}
-                </ThemedText>
-              )}
-              <ThemedText style={styles.chevron}>›</ThemedText>
-            </View>
-          </Pressable>
-        ))}
+        {patients.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            text="No patients yet — add your first patient to begin."
+            actionLabel="New patient"
+            onAction={() => router.push('/new-patient')}
+          />
+        ) : (
+          patients.map((p, i) => (
+            <Rise key={p.id} index={i}>
+              <Card onPress={() => openConsult(p)} style={styles.patientCard}>
+                <View style={styles.avatar}>
+                  <T variant="secondary" style={styles.avatarText}>
+                    {initials(p.name)}
+                  </T>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T variant="body" style={styles.name}>
+                    {p.name}
+                  </T>
+                  <T variant="caption" tone="secondary" numberOfLines={1}>
+                    {[p.age && `${p.age}y`, p.sex, p.complaint].filter(Boolean).join(' · ')}
+                  </T>
+                </View>
+                {p.lastVisit && (
+                  <T variant="caption" tone="faint">
+                    {p.lastVisit}
+                  </T>
+                )}
+              </Card>
+            </Rise>
+          ))
+        )}
       </ScrollView>
+
+      {/* FAB — new patient */}
+      <Pressable
+        onPress={() => router.push('/new-patient')}
+        accessibilityRole="button"
+        accessibilityLabel="New patient"
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}>
+        <Plus size={26} color={color.onAccent} strokeWidth={2.2} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F8FC' },
-  scroll: { padding: 20, gap: 12, paddingBottom: 32 },
-  heading: { fontSize: 26, fontWeight: '800', color: '#0F172A' },
-  subheading: { fontSize: 15, color: '#64748B', marginBottom: 6 },
-  newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#DBE7FA',
-    padding: 16,
-  },
-  plusCircle: {
+  container: { flex: 1, backgroundColor: color.bg },
+  scroll: { padding: space.xl, gap: space.m, paddingBottom: 112 },
+  patientCard: { flexDirection: 'row', alignItems: 'center', gap: space.l },
+  avatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#E0EDFF',
+    borderRadius: radius.chip,
+    backgroundColor: color.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plus: { fontSize: 24, color: '#2563EB', lineHeight: 26 },
-  newTitle: { fontSize: 16, color: '#1D4ED8' },
-  newSub: { color: '#64748B' },
-  sectionLabel: { color: '#94A3B8', letterSpacing: 0.6, fontSize: 11, marginTop: 10, marginLeft: 4 },
-  card: {
-    flexDirection: 'row',
+  avatarText: { color: color.accent, fontWeight: '600' },
+  name: { fontWeight: '600' },
+  fab: {
+    position: 'absolute',
+    right: space.xl,
+    bottom: space.xxl,
+    width: 56,
+    height: 56,
+    borderRadius: radius.chip,
+    backgroundColor: color.accent,
     alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5EAF1',
-    padding: 14,
+    justifyContent: 'center',
+    ...shadow,
   },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  name: { fontSize: 16, color: '#0F172A' },
-  meta: { color: '#64748B', marginTop: 2 },
-  right: { alignItems: 'flex-end', gap: 2 },
-  visit: { color: '#94A3B8' },
-  chevron: { fontSize: 22, color: '#CBD5E1', lineHeight: 22 },
+  fabPressed: { transform: [{ scale: 0.98 }] },
 });

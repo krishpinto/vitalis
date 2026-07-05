@@ -1,90 +1,135 @@
-// A single differential diagnosis row with tier badge, evidence-tap, and the
-// doctor's accept / dismiss controls.
+// A single differential — tier left-border + chip, diagnosis name, 2-line
+// reasoning preview, evidence count badge, accept/dismiss icon buttons, and
+// clinician feedback thumbs (item 6).
 
+import { Check, Quote, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-import type { Differential, DifferentialTier } from '@/types/clinical';
+import { Card, Chip, T } from '@/components/ui';
+import { color, radius, space, tierMeta } from '@/theme';
+import type { Differential, FeedbackVote } from '@/types/clinical';
 
 export type DiffStatus = 'pending' | 'accepted' | 'dismissed';
-
-const TIER_META: Record<DifferentialTier, { label: string; color: string; bg: string }> = {
-  most_likely: { label: 'MOST LIKELY', color: '#065F46', bg: '#D1FAE5' },
-  expanded: { label: 'EXPANDED', color: '#1E3A8A', bg: '#DBEAFE' },
-  cant_miss: { label: "CAN'T MISS", color: '#991B1B', bg: '#FEE2E2' },
-};
 
 interface Props {
   differential: Differential;
   status: DiffStatus;
+  vote?: FeedbackVote;
   onPressEvidence: () => void;
   onAccept: () => void;
   onDismiss: () => void;
+  onVote: (v: FeedbackVote) => void;
 }
 
-export function DifferentialCard({ differential, status, onPressEvidence, onAccept, onDismiss }: Props) {
-  const tier = TIER_META[differential.tier];
+function IconButton({
+  icon: Icon,
+  active,
+  activeColor,
+  onPress,
+  label,
+}: {
+  icon: typeof Check;
+  active: boolean;
+  activeColor: string;
+  onPress: () => void;
+  label: string;
+}) {
   return (
-    <ThemedView
-      type="backgroundElement"
-      style={[styles.card, status === 'dismissed' && styles.dimmed]}>
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.iconBtn,
+        active && { backgroundColor: activeColor, borderColor: activeColor },
+        pressed && styles.pressed,
+      ]}>
+      <Icon size={16} color={active ? color.onAccent : color.inkSecondary} strokeWidth={2.2} />
+    </Pressable>
+  );
+}
+
+export function DifferentialCard({
+  differential,
+  status,
+  vote,
+  onPressEvidence,
+  onAccept,
+  onDismiss,
+  onVote,
+}: Props) {
+  const tier = tierMeta[differential.tier];
+  const evidenceCount = [differential.transcript_reference, differential.guideline_reference].filter(Boolean).length;
+
+  return (
+    <Card accent={tier.color} style={[styles.card, status === 'dismissed' && styles.dimmed]}>
       <View style={styles.headerRow}>
-        <View style={[styles.badge, { backgroundColor: tier.bg }]}>
-          <ThemedText type="smallBold" style={[styles.badgeText, { color: tier.color }]}>
-            {tier.label}
-          </ThemedText>
+        <Chip label={tier.label} tint={tier.color} soft={tier.soft} />
+        <View style={styles.actions}>
+          <IconButton icon={X} label="Dismiss" active={status === 'dismissed'} activeColor={color.tierCantMiss} onPress={onDismiss} />
+          <IconButton icon={Check} label="Accept" active={status === 'accepted'} activeColor={color.accent} onPress={onAccept} />
         </View>
-        {status === 'accepted' && <ThemedText style={styles.statusAccepted}>✓ Accepted</ThemedText>}
-        {status === 'dismissed' && <ThemedText style={styles.statusDismissed}>Dismissed</ThemedText>}
       </View>
 
-      <ThemedText type="subtitle" style={styles.diagnosis}>
+      <T variant="body" style={styles.diagnosis}>
         {differential.diagnosis}
-      </ThemedText>
-      <ThemedText themeColor="textSecondary" style={styles.reasoning}>
+      </T>
+      <T variant="secondary" tone="secondary" numberOfLines={2}>
         {differential.reasoning}
-      </ThemedText>
+      </T>
 
-      <Pressable onPress={onPressEvidence} style={styles.evidenceBtn} hitSlop={6}>
-        <ThemedText type="linkPrimary">🔍 Tap to see evidence</ThemedText>
-      </Pressable>
-
-      <View style={styles.actions}>
+      <View style={styles.footerRow}>
         <Pressable
-          onPress={onDismiss}
-          style={[styles.actionBtn, styles.dismissBtn]}
-          accessibilityRole="button">
-          <ThemedText type="smallBold" style={{ color: '#991B1B' }}>
-            Dismiss
-          </ThemedText>
+          onPress={onPressEvidence}
+          hitSlop={6}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.evidenceBtn, pressed && styles.pressed]}>
+          <Quote size={13} color={color.accent} strokeWidth={2.2} />
+          <T variant="caption" tone="accent" style={{ fontWeight: '600' }}>
+            Evidence · {evidenceCount}
+          </T>
         </Pressable>
-        <Pressable
-          onPress={onAccept}
-          style={[styles.actionBtn, styles.acceptBtn]}
-          accessibilityRole="button">
-          <ThemedText type="smallBold" style={{ color: '#fff' }}>
-            Accept
-          </ThemedText>
-        </Pressable>
+        <View style={styles.thumbs}>
+          <IconButton icon={ThumbsUp} label="Helpful" active={vote === 'up'} activeColor={color.accent} onPress={() => onVote('up')} />
+          <IconButton icon={ThumbsDown} label="Not helpful" active={vote === 'down'} activeColor={color.tierCantMiss} onPress={() => onVote('down')} />
+        </View>
       </View>
-    </ThemedView>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, padding: 16, gap: 8 },
-  dimmed: { opacity: 0.5 },
+  card: { gap: space.s },
+  dimmed: { opacity: 0.45 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 11, letterSpacing: 0.5 },
-  statusAccepted: { color: '#047857', fontWeight: '700', fontSize: 13 },
-  statusDismissed: { color: '#991B1B', fontWeight: '700', fontSize: 13 },
-  diagnosis: { fontSize: 22, lineHeight: 28 },
-  reasoning: { fontSize: 14, lineHeight: 20 },
-  evidenceBtn: { paddingVertical: 4 },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  actionBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  dismissBtn: { backgroundColor: '#FEE2E2' },
-  acceptBtn: { backgroundColor: '#059669' },
+  actions: { flexDirection: 'row', gap: space.s },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.chip,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: { transform: [{ scale: 0.98 }] },
+  diagnosis: { fontWeight: '600', fontSize: 19, lineHeight: 25 },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: space.xs,
+  },
+  evidenceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    backgroundColor: color.accentSoft,
+    borderRadius: radius.chip,
+    paddingHorizontal: space.m,
+    paddingVertical: space.xs,
+  },
+  thumbs: { flexDirection: 'row', gap: space.s },
 });

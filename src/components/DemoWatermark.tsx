@@ -1,30 +1,37 @@
-// Persistent banner making it unmistakable that no real patient data is involved.
-// Per CLAUDE.md Phase 6: "Add DEMO DATA watermark everywhere".
+// Slim amber ribbon making it unmistakable that no real patient data is
+// involved. Restyled per the design system — legible, not screaming. Stays
+// until real-patient compliance work exists; never remove.
 
+import { TriangleAlert } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from './themed-text';
+import { T } from './ui';
+import { color, space } from '@/theme';
 
 export function DemoWatermark() {
   return (
     <View style={styles.banner}>
-      <ThemedText type="smallBold" style={styles.text}>
-        ⚠︎ DEMO DATA — SYNTHETIC PATIENT · NOT FOR CLINICAL USE
-      </ThemedText>
+      <TriangleAlert size={12} color={color.ribbonText} strokeWidth={2.2} />
+      <T variant="caption" style={styles.text}>
+        Demo — synthetic patients only · not for clinical use
+      </T>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.s,
+    backgroundColor: color.ribbonBg,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.m,
   },
   text: {
-    color: '#92400E',
-    fontSize: 12,
+    color: color.ribbonText,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
 });

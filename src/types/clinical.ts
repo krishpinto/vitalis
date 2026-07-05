@@ -27,6 +27,18 @@ export interface TranscriptLine {
   /** Seconds from start of recording, if the STT provides timing. */
   startTime?: number;
   endTime?: number;
+  /** Recorded audio chunk this line was transcribed from — the evidence link. */
+  chunkId?: string;
+}
+
+/** A persisted audio chunk from the consult recording (7s live chunks). */
+export interface AudioChunk {
+  id: string;
+  /** Local file URI of the recorded chunk. */
+  uri: string;
+  /** Offset of the chunk from the start of the consult, in ms. */
+  startMs: number;
+  endMs: number;
 }
 
 export interface Transcript {
@@ -65,11 +77,38 @@ export interface Differential {
   guideline_reference: string;
 }
 
+/** Item 3 — a checklist item the consult did not cover ("Not yet ruled out"). */
+export interface GapItem {
+  missedItem: string;
+  whyItMatters: string;
+  suggestedQuestion: string;
+}
+
+/** Item 4 — deferential assessment-alignment note. Never grades the doctor. */
+export interface AlignmentNote {
+  /** Leads with agreement where the doctor's direction matched guidelines. */
+  agreement: string;
+  /** Framed as "additionally consider…" — never as corrections. */
+  additional_considerations: string[];
+}
+
 export interface DiagnosisResult {
   differentials: Differential[];
   suggested_workup: string[];
   red_flags: string[];
+  gaps: GapItem[];
+  alignment: AlignmentNote;
 }
+
+/** Item 5 — an in-consult suggested question card. */
+export interface Suggestion {
+  id: string;
+  question: string;
+  rationale: string;
+}
+
+/** Item 6 — clinician feedback on a differential. */
+export type FeedbackVote = 'up' | 'down';
 
 /** A photo or scanned record attached to the consult, prepared for Gemini vision. */
 export interface Attachment {

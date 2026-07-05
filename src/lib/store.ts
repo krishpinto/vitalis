@@ -5,7 +5,9 @@ import { create } from 'zustand';
 
 import type {
   Attachment,
+  AudioChunk,
   DiagnosisResult,
+  FeedbackVote,
   Patient,
   StructuredEntities,
   Transcript,
@@ -31,10 +33,16 @@ interface AppState {
   entities: StructuredEntities | null;
   diagnosis: DiagnosisResult | null;
   attachments: Attachment[];
+  /** Recorded audio chunks for the current consult — the evidence audio. */
+  chunks: AudioChunk[];
+  /** Clinician feedback per differential index (item 6). Local-only for now. */
+  feedback: Record<number, { vote: FeedbackVote; comment?: string }>;
 
   setTranscript: (t: Transcript | null) => void;
   setEntities: (e: StructuredEntities | null) => void;
   setDiagnosis: (d: DiagnosisResult | null) => void;
+  setChunks: (c: AudioChunk[]) => void;
+  setFeedback: (index: number, vote: FeedbackVote | null, comment?: string) => void;
   addAttachment: (a: Attachment) => void;
   removeAttachment: (id: string) => void;
 
@@ -66,12 +74,23 @@ export const useConsult = create<AppState>((set, get) => ({
   entities: null,
   diagnosis: null,
   attachments: [],
+  chunks: [],
+  feedback: {},
 
   setTranscript: (transcript) => set({ transcript }),
   setEntities: (entities) => set({ entities }),
   setDiagnosis: (diagnosis) => set({ diagnosis }),
+  setChunks: (chunks) => set({ chunks }),
+  setFeedback: (index, vote, comment) =>
+    set((s) => {
+      const next = { ...s.feedback };
+      if (vote === null) delete next[index];
+      else next[index] = { vote, comment };
+      return { feedback: next };
+    }),
   addAttachment: (a) => set((s) => ({ attachments: [...s.attachments, a] })),
   removeAttachment: (id) => set((s) => ({ attachments: s.attachments.filter((x) => x.id !== id) })),
 
-  reset: () => set({ transcript: null, entities: null, diagnosis: null, attachments: [] }),
+  reset: () =>
+    set({ transcript: null, entities: null, diagnosis: null, attachments: [], chunks: [], feedback: {} }),
 }));

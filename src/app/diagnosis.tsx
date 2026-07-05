@@ -1,28 +1,38 @@
+// Differential draft — red-flag banner pinned top, tier sections, "Not yet
+// ruled out" gap detection, deferential assessment alignment, and the
+// suggested-workup checklist. Every card opens its cited evidence.
+
 import { useRouter } from 'expo-router';
+import {
+  CircleCheck,
+  ClipboardList,
+  FileQuestion,
+  HeartHandshake,
+  SearchX,
+  TriangleAlert,
+} from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { DifferentialCard, type DiffStatus } from '@/components/DifferentialCard';
 import { EvidenceModal } from '@/components/EvidenceModal';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Card, EmptyState, PrimaryButton, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import type { Differential } from '@/types/clinical';
+import { color, radius, space, tierMeta } from '@/theme';
+import type { Differential, DifferentialTier } from '@/types/clinical';
 
-const TIER_ORDER: Array<{ key: Differential['tier']; label: string }> = [
-  { key: 'most_likely', label: 'Most likely' },
-  { key: 'expanded', label: 'Expanded differential' },
-  { key: 'cant_miss', label: "Can't-miss" },
-];
+const TIER_ORDER: DifferentialTier[] = ['most_likely', 'expanded', 'cant_miss'];
 
 export default function DiagnosisScreen() {
   const router = useRouter();
   const diagnosis = useConsult((s) => s.diagnosis);
+  const feedback = useConsult((s) => s.feedback);
+  const setFeedback = useConsult((s) => s.setFeedback);
 
   const [statuses, setStatuses] = useState<Record<number, DiffStatus>>({});
   const [evidence, setEvidence] = useState<Differential | null>(null);
 
-  // Keyed index so accept/dismiss maps back to a stable differential.
+  // Keyed index so accept/dismiss and feedback map back to a stable differential.
   const indexed = useMemo(
     () => (diagnosis?.differentials ?? []).map((d, i) => ({ d, i })),
     [diagnosis]
@@ -30,92 +40,180 @@ export default function DiagnosisScreen() {
 
   if (!diagnosis) {
     return (
-      <ThemedView style={styles.empty}>
-        <ThemedText themeColor="textSecondary">No differential yet.</ThemedText>
-      </ThemedView>
+      <View style={styles.emptyScreen}>
+        <EmptyState
+          icon={FileQuestion}
+          text="No differential draft yet — analyze a consult first."
+          actionLabel="Back to patients"
+          onAction={() => router.replace('/patients')}
+        />
+      </View>
     );
   }
 
   const setStatus = (i: number, s: DiffStatus) =>
     setStatuses((prev) => ({ ...prev, [i]: prev[i] === s ? 'pending' : s }));
 
-  return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.banner}>
-          Second-opinion draft. Every item is grounded in the transcript and guidelines — tap a card
-          for evidence. Requires doctor sign-off.
-        </ThemedText>
+  let riseIndex = 0;
 
-        {TIER_ORDER.map(({ key, label }) => {
-          const group = indexed.filter(({ d }) => d.tier === key);
+  return (
+    <View style={styles.container}>
+      {/* Red flags — pinned top */}
+      {diagnosis.red_flags.length > 0 && (
+        <View style={styles.redBanner}>
+          <TriangleAlert size={16} color={color.redFlagText} strokeWidth={2.2} />
+          <T variant="caption" tone="danger" style={styles.redBannerText} numberOfLines={2}>
+            {diagnosis.red_flags.join('  ·  ')}
+          </T>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <T variant="caption" tone="faint">
+          Second-opinion draft — every item is grounded in the consult and guidelines. Tap Evidence
+          to hear the source. Requires doctor sign-off.
+        </T>
+
+        {TIER_ORDER.map((tierKey) => {
+          const group = indexed.filter(({ d }) => d.tier === tierKey);
           if (!group.length) return null;
           return (
-            <View key={key} style={styles.tierGroup}>
-              <ThemedText type="subtitle" style={styles.tierLabel}>
-                {label}
-              </ThemedText>
+            <View key={tierKey} style={styles.tierGroup}>
+              <SectionHeader title={tierMeta[tierKey].label} />
               {group.map(({ d, i }) => (
-                <DifferentialCard
-                  key={i}
-                  differential={d}
-                  status={statuses[i] ?? 'pending'}
-                  onPressEvidence={() => setEvidence(d)}
-                  onAccept={() => setStatus(i, 'accepted')}
-                  onDismiss={() => setStatus(i, 'dismissed')}
-                />
+                <Rise key={i} index={riseIndex++}>
+                  <DifferentialCard
+                    differential={d}
+                    status={statuses[i] ?? 'pending'}
+                    vote={feedback[i]?.vote}
+                    onPressEvidence={() => setEvidence(d)}
+                    onAccept={() => setStatus(i, 'accepted')}
+                    onDismiss={() => setStatus(i, 'dismissed')}
+                    onVote={(v) => setFeedback(i, feedback[i]?.vote === v ? null : v)}
+                  />
+                </Rise>
               ))}
             </View>
           );
         })}
 
-        <View style={styles.listCard}>
-          <ThemedText type="smallBold" style={styles.listHeading}>
-            SUGGESTED WORKUP
-          </ThemedText>
-          {diagnosis.suggested_workup.map((w, i) => (
-            <ThemedText key={i} style={styles.listItem}>
-              • {w}
-            </ThemedText>
-          ))}
-        </View>
+        {/* Item 3 — gap detection */}
+        {diagnosis.gaps.length > 0 && (
+          <View style={styles.tierGroup}>
+            <SectionHeader title="Not yet ruled out" />
+            {diagnosis.gaps.map((g, i) => (
+              <Rise key={i} index={riseIndex++}>
+                <Card accent={color.tierExpanded} style={styles.gapCard}>
+                  <View style={styles.gapHeader}>
+                    <SearchX size={16} color={color.tierExpanded} strokeWidth={2.2} />
+                    <T variant="secondary" style={styles.gapTitle}>
+                      {g.missedItem}
+                    </T>
+                  </View>
+                  <T variant="secondary" tone="secondary">
+                    {g.whyItMatters}
+                  </T>
+                  <View style={styles.gapQuestion}>
+                    <T variant="caption" tone="secondary" style={styles.gapQuestionLabel}>
+                      SUGGESTED QUESTION
+                    </T>
+                    <T variant="secondary" style={{ fontStyle: 'italic' }}>
+                      “{g.suggestedQuestion}”
+                    </T>
+                  </View>
+                </Card>
+              </Rise>
+            ))}
+          </View>
+        )}
 
-        <View style={[styles.listCard, styles.redCard]}>
-          <ThemedText type="smallBold" style={[styles.listHeading, { color: '#991B1B' }]}>
-            RED FLAGS
-          </ThemedText>
-          {diagnosis.red_flags.map((r, i) => (
-            <ThemedText key={i} style={[styles.listItem, { color: '#991B1B' }]}>
-              • {r}
-            </ThemedText>
-          ))}
-        </View>
+        {/* Item 4 — assessment alignment (deferential, never grading) */}
+        {!!diagnosis.alignment.agreement && (
+          <View style={styles.tierGroup}>
+            <SectionHeader title="Assessment alignment" />
+            <Rise index={riseIndex++}>
+              <Card style={styles.gapCard}>
+                <View style={styles.gapHeader}>
+                  <HeartHandshake size={16} color={color.accent} strokeWidth={2.2} />
+                  <T variant="secondary" style={styles.gapTitle}>
+                    In agreement
+                  </T>
+                </View>
+                <T variant="secondary" tone="secondary">
+                  {diagnosis.alignment.agreement}
+                </T>
+                {diagnosis.alignment.additional_considerations.map((a, i) => (
+                  <View key={i} style={styles.considerRow}>
+                    <CircleCheck size={14} color={color.accent} strokeWidth={2.2} style={styles.considerIcon} />
+                    <T variant="secondary" tone="secondary" style={{ flex: 1 }}>
+                      {a}
+                    </T>
+                  </View>
+                ))}
+              </Card>
+            </Rise>
+          </View>
+        )}
+
+        {/* Suggested workup — checklist card */}
+        {diagnosis.suggested_workup.length > 0 && (
+          <View style={styles.tierGroup}>
+            <SectionHeader title="Suggested workup" />
+            <Rise index={riseIndex++}>
+              <Card style={styles.gapCard}>
+                {diagnosis.suggested_workup.map((w, i) => (
+                  <View key={i} style={styles.considerRow}>
+                    <ClipboardList size={14} color={color.inkSecondary} strokeWidth={2.2} style={styles.considerIcon} />
+                    <T variant="secondary" style={{ flex: 1 }}>
+                      {w}
+                    </T>
+                  </View>
+                ))}
+              </Card>
+            </Rise>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable style={styles.doneBtn} onPress={() => router.replace('/')}>
-          <ThemedText type="smallBold" style={{ color: '#fff' }}>
-            Finish & start new consult
-          </ThemedText>
-        </Pressable>
+        <PrimaryButton label="Finish & start new consult" onPress={() => router.replace('/')} />
       </View>
 
       <EvidenceModal differential={evidence} visible={!!evidence} onClose={() => setEvidence(null)} />
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  scroll: { padding: 20, gap: 16, paddingBottom: 24 },
-  banner: { lineHeight: 18 },
-  tierGroup: { gap: 12 },
-  tierLabel: { fontSize: 20 },
-  listCard: { backgroundColor: '#F0F0F3', borderRadius: 16, padding: 16, gap: 6 },
-  redCard: { backgroundColor: '#FEE2E2' },
-  listHeading: { fontSize: 11, letterSpacing: 0.5, color: '#374151' },
-  listItem: { fontSize: 15, lineHeight: 21 },
-  footer: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB' },
-  doneBtn: { backgroundColor: '#059669', paddingVertical: 15, borderRadius: 14, alignItems: 'center' },
+  container: { flex: 1, backgroundColor: color.bg },
+  emptyScreen: { flex: 1, backgroundColor: color.bg, justifyContent: 'center' },
+  redBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.s,
+    backgroundColor: color.redFlagBg,
+    paddingHorizontal: space.l,
+    paddingVertical: space.s,
+  },
+  redBannerText: { flex: 1, fontWeight: '600' },
+  scroll: { padding: space.l, gap: space.l, paddingBottom: space.xl },
+  tierGroup: { gap: space.m },
+  gapCard: { gap: space.s },
+  gapHeader: { flexDirection: 'row', alignItems: 'center', gap: space.s },
+  gapTitle: { fontWeight: '600' },
+  gapQuestion: {
+    backgroundColor: color.bg,
+    borderRadius: radius.button,
+    padding: space.m,
+    gap: space.xs,
+  },
+  gapQuestionLabel: { fontWeight: '600', letterSpacing: 0.6 },
+  considerRow: { flexDirection: 'row', gap: space.s, alignItems: 'flex-start' },
+  considerIcon: { marginTop: space.xs },
+  footer: {
+    padding: space.l,
+    backgroundColor: color.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.border,
+  },
 });
