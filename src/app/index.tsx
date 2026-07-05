@@ -1,98 +1,93 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+export default function LandingScreen() {
+  const router = useRouter();
 
-export default function HomeScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+    <View style={styles.container}>
+      <View style={styles.hero}>
+        <View style={styles.logo}>
+          <ThemedText style={styles.logoMark}>🩺</ThemedText>
+        </View>
+        <View style={styles.badge}>
+          <ThemedText type="smallBold" style={styles.badgeText}>
+            CLINICAL DECISION SUPPORT
           </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
+        </View>
+        <ThemedText style={styles.title}>Second Opinion</ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Ambient consult transcription and a cited differential-diagnosis draft — for licensed
+          doctors, on every patient.
         </ThemedText>
+      </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      <View style={styles.features}>
+        {[
+          { icon: '🎙️', text: 'Live Hinglish transcript, labelled by speaker' },
+          { icon: '🧠', text: 'Structured summary + cited differentials' },
+          { icon: '✍️', text: 'Draft only — you review and sign off' },
+        ].map((f, i) => (
+          <View key={i} style={styles.feature}>
+            <ThemedText style={styles.featureIcon}>{f.icon}</ThemedText>
+            <ThemedText style={styles.featureText}>{f.text}</ThemedText>
+          </View>
+        ))}
+      </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <View style={styles.bottom}>
+        <Pressable style={styles.cta} onPress={() => router.push('/patients')} accessibilityRole="button">
+          <ThemedText type="smallBold" style={styles.ctaText}>
+            Get Started
+          </ThemedText>
+        </Pressable>
+        <ThemedText type="small" style={styles.footnote}>
+          Demo build · synthetic patients only
+        </ThemedText>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
+  container: { flex: 1, padding: 24, gap: 28, justifyContent: 'center', backgroundColor: '#F5F8FC' },
+  hero: { gap: 14, alignItems: 'flex-start' },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: '#E0EDFF',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
+  logoMark: { fontSize: 32 },
+  badge: {
+    backgroundColor: '#E0EDFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-  code: {
-    textTransform: 'uppercase',
+  badgeText: { color: '#1D4ED8', fontSize: 11, letterSpacing: 0.6 },
+  title: { fontSize: 36, lineHeight: 42, fontWeight: '800', color: '#0F172A' },
+  subtitle: { fontSize: 16, lineHeight: 24, color: '#475569' },
+  features: { gap: 16 },
+  feature: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+  featureIcon: { fontSize: 22, width: 28, textAlign: 'center' },
+  featureText: { flex: 1, fontSize: 15, color: '#1E293B', lineHeight: 21 },
+  bottom: { gap: 12 },
+  cta: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 17,
+    borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  ctaText: { color: '#fff', fontSize: 16 },
+  footnote: { textAlign: 'center', color: '#94A3B8' },
 });
