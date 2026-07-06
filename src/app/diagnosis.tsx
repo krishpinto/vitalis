@@ -176,7 +176,7 @@ export default function DiagnosisScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <PrimaryButton label="Finish & start new consult" onPress={() => router.replace('/')} />
+        <PrimaryButton label="Finish & start new consult" onPress={() => router.replace('/home')} />
       </View>
 
       <EvidenceModal differential={evidence} visible={!!evidence} onClose={() => setEvidence(null)} />

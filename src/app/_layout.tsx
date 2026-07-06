@@ -33,6 +33,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: color.bg },
           }}>
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="home" options={{ headerShown: false }} />
           <Stack.Screen name="patients" options={{ title: 'Patients' }} />
           <Stack.Screen name="new-patient" options={{ title: 'New patient' }} />
           <Stack.Screen name="consult" options={{ title: 'Live consult' }} />

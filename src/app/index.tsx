@@ -88,8 +88,8 @@ export default function LandingScreen() {
           </Rise>
           <Rise index={2}>
             <PrimaryButton
-              label="Start a consult"
-              onPress={() => router.push('/patients')}
+              label="Get started"
+              onPress={() => router.push('/home')}
               variant="inverse"
               style={styles.cta}
             />
