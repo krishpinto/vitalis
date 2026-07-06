@@ -49,6 +49,10 @@ export const color = {
 
   // On-accent text
   onAccent: '#FFFFFF',
+  // Hero (landing) — supporting tints over the deep-teal accent surface
+  onAccentSoft: 'rgba(255,255,255,0.78)',
+  heroChip: 'rgba(255,255,255,0.12)',
+  heroLine: 'rgba(255,255,255,0.10)',
 
   // Disabled
   disabledBg: '#E4E2DC',

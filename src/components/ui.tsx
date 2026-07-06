@@ -101,12 +101,18 @@ export function PrimaryButton({
   disabled?: boolean;
   loading?: boolean;
   icon?: LucideIcon;
-  variant?: 'solid' | 'quiet' | 'danger';
+  variant?: 'solid' | 'quiet' | 'danger' | 'inverse';
   style?: StyleProp<ViewStyle>;
 }) {
   const bg =
-    variant === 'solid' ? color.accent : variant === 'danger' ? color.tierCantMiss : color.accentSoft;
-  const fg = variant === 'quiet' ? color.accent : color.onAccent;
+    variant === 'solid'
+      ? color.accent
+      : variant === 'danger'
+        ? color.tierCantMiss
+        : variant === 'inverse'
+          ? color.card
+          : color.accentSoft;
+  const fg = variant === 'quiet' || variant === 'inverse' ? color.accent : color.onAccent;
   return (
     <Pressable
       onPress={onPress}
