@@ -1,13 +1,16 @@
-// Patients — list of patient cards with avatar initials, meta line, and a FAB
-// for adding a new patient.
+// Patients — searchable list of patient cards (avatar initials, meta chips,
+// per-card consult CTA) with a FAB for adding a new patient. Card structure
+// inspired by consumer-health doctor lists, executed in clinical-calm tokens:
+// no photos, one accent, everything on the card is real and tappable.
 
 import { useRouter } from 'expo-router';
-import { Plus, Users } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { CalendarClock, Plus, Search, Users } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { Card, EmptyState, Rise, SectionHeader, T } from '@/components/ui';
+import { Card, Chip, EmptyState, PrimaryButton, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import { color, radius, shadow, space } from '@/theme';
+import { color, font, radius, shadow, space } from '@/theme';
 import type { Patient } from '@/types/clinical';
 
 function initials(name: string) {
@@ -25,6 +28,14 @@ export default function PatientsScreen() {
   const selectPatient = useConsult((s) => s.selectPatient);
   const reset = useConsult((s) => s.reset);
 
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? patients.filter(
+        (p) => p.name.toLowerCase().includes(q) || (p.complaint ?? '').toLowerCase().includes(q)
+      )
+    : patients;
+
   function openConsult(p: Patient) {
     selectPatient(p.id);
     reset();
@@ -33,43 +44,73 @@ export default function PatientsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <T variant="title">Patients</T>
-        <T variant="secondary" tone="secondary">
-          Choose a patient to start a consult.
-        </T>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Search */}
+        <View style={styles.searchBox}>
+          <Search size={16} color={color.inkFaint} strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search patients or complaints"
+            placeholderTextColor={color.inkFaint}
+            returnKeyType="search"
+          />
+        </View>
 
-        <SectionHeader title="Recent" />
+        <SectionHeader title={q ? 'Results' : 'Recent'} />
 
-        {patients.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={Users}
-            text="No patients yet — add your first patient to begin."
-            actionLabel="New patient"
-            onAction={() => router.push('/new-patient')}
+            text={
+              q
+                ? `No patients match “${query.trim()}”.`
+                : 'No patients yet — add your first patient to begin.'
+            }
+            actionLabel={q ? undefined : 'New patient'}
+            onAction={q ? undefined : () => router.push('/new-patient')}
           />
         ) : (
-          patients.map((p, i) => (
+          filtered.map((p, i) => (
             <Rise key={p.id} index={i}>
-              <Card onPress={() => openConsult(p)} style={styles.patientCard}>
-                <View style={styles.avatar}>
-                  <T variant="secondary" style={styles.avatarText}>
-                    {initials(p.name)}
-                  </T>
+              <Card style={styles.patientCard}>
+                <View style={styles.topRow}>
+                  <View style={styles.avatar}>
+                    <T variant="secondary" style={styles.avatarText}>
+                      {initials(p.name)}
+                    </T>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <T variant="body" style={styles.name}>
+                      {p.name}
+                    </T>
+                    <T variant="caption" tone="secondary">
+                      {[p.age && `${p.age} years`, p.sex].filter(Boolean).join(' · ') ||
+                        'No details recorded'}
+                    </T>
+                  </View>
+                  {p.lastVisit && (
+                    <Chip
+                      label={p.lastVisit}
+                      icon={CalendarClock}
+                      tint={color.inkSecondary}
+                      soft={color.bg}
+                    />
+                  )}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <T variant="body" style={styles.name}>
-                    {p.name}
-                  </T>
-                  <T variant="caption" tone="secondary" numberOfLines={1}>
-                    {[p.age && `${p.age}y`, p.sex, p.complaint].filter(Boolean).join(' · ')}
-                  </T>
-                </View>
-                {p.lastVisit && (
-                  <T variant="caption" tone="faint">
-                    {p.lastVisit}
-                  </T>
+
+                {p.complaint && (
+                  <View style={styles.chipRow}>
+                    <Chip label={p.complaint} />
+                  </View>
                 )}
+
+                <PrimaryButton
+                  label="Start consult"
+                  onPress={() => openConsult(p)}
+                  style={styles.consultBtn}
+                />
               </Card>
             </Rise>
           ))
@@ -91,7 +132,24 @@ export default function PatientsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: color.bg },
   scroll: { padding: space.xl, gap: space.m, paddingBottom: 112 },
-  patientCard: { flexDirection: 'row', alignItems: 'center', gap: space.l },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.s,
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.border,
+    borderRadius: radius.button,
+    paddingHorizontal: space.l,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: space.m,
+    ...font.secondary,
+    color: color.ink,
+  },
+  patientCard: { gap: space.m },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: space.m },
   avatar: {
     width: 44,
     height: 44,
@@ -102,6 +160,8 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: color.accent, fontWeight: '600' },
   name: { fontWeight: '600' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
+  consultBtn: { minHeight: 44, paddingVertical: space.m },
   fab: {
     position: 'absolute',
     right: space.xl,
