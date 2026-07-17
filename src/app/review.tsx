@@ -5,14 +5,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { ArrowRight, Camera, FileText, Sparkles, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image } from 'react-native';
 
 import { EntityCard } from '@/components/EntityCard';
 import { TranscriptView } from '@/components/TranscriptView';
 import { Chip, EmptyState, ErrorCard, PrimaryButton, Rise, SectionHeader, SkeletonCard, T } from '@/components/ui';
 import { reasonDifferentials, structureTranscript } from '@/lib/gemini';
 import { useConsult } from '@/lib/store';
-import { color, radius, space } from '@/theme';
+import { Pressable, ScrollView, View } from '@/tw';
 import type { Attachment } from '@/types/clinical';
 
 export default function ReviewScreen() {
@@ -26,7 +26,7 @@ export default function ReviewScreen() {
 
   if (!transcript) {
     return (
-      <View style={styles.emptyScreen}>
+      <View className="flex-1 bg-bg justify-center">
         <EmptyState
           icon={FileText}
           text="No transcript yet — record a consult first."
@@ -80,15 +80,15 @@ export default function ReviewScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <View className="flex-1 bg-bg">
+      <ScrollView contentContainerClassName="p-4 gap-3 pb-6">
         <SectionHeader
           title="Transcript"
           trailing={
             refining ? (
               <Chip label="refining speakers…" />
             ) : transcript.isDemo ? (
-              <Chip label="synthetic" tint={color.ribbonText} soft={color.ribbonBg} />
+              <Chip label="synthetic" tint="#B7791F" soft="#FDF6E9" />
             ) : undefined
           }
         />
@@ -97,9 +97,9 @@ export default function ReviewScreen() {
         <SectionHeader
           title="Photos & records"
           trailing={
-            <Pressable onPress={attachPhoto} hitSlop={8} accessibilityRole="button" style={styles.attachBtn}>
-              <Camera size={15} color={color.accent} strokeWidth={2.2} />
-              <T variant="caption" tone="accent" style={{ fontWeight: '600' }}>
+            <Pressable onPress={attachPhoto} hitSlop={8} accessibilityRole="button" className="flex-row items-center gap-1">
+              <Camera size={15} color="#0F6E6B" strokeWidth={2.2} />
+              <T variant="caption" tone="accent" className="font-semibold">
                 Attach
               </T>
             </Pressable>
@@ -110,16 +110,16 @@ export default function ReviewScreen() {
             Optional — attach a rash photo or prior report to inform the draft.
           </T>
         ) : (
-          <View style={styles.thumbs}>
+          <View className="flex-row flex-wrap gap-3">
             {attachments.map((a) => (
-              <View key={a.id} style={styles.thumbWrap}>
-                <Image source={{ uri: a.uri }} style={styles.thumb} />
+              <View key={a.id} className="relative">
+                <Image source={{ uri: a.uri }} style={{ width: 72, height: 72, borderRadius: 12, backgroundColor: '#ECEAE3' }} />
                 <Pressable
                   onPress={() => removeAttachment(a.id)}
-                  style={styles.thumbRemove}
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-ink items-center justify-center"
                   hitSlop={8}
                   accessibilityRole="button">
-                  <X size={12} color={color.onAccent} strokeWidth={2.5} />
+                  <X size={12} color="#FFFFFF" strokeWidth={2.5} />
                 </Pressable>
               </View>
             ))}
@@ -140,7 +140,7 @@ export default function ReviewScreen() {
         {error && <ErrorCard message={error} onRetry={entities ? generateDifferential : analyze} />}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View className="p-4 bg-card border-t border-border">
         {!entities ? (
           <PrimaryButton label="Analyze" onPress={analyze} loading={structuring} icon={Sparkles} />
         ) : (
@@ -155,30 +155,3 @@ export default function ReviewScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
-  emptyScreen: { flex: 1, backgroundColor: color.bg, justifyContent: 'center' },
-  scroll: { padding: space.l, gap: space.m, paddingBottom: space.xl },
-  attachBtn: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  thumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.m },
-  thumbWrap: { position: 'relative' },
-  thumb: { width: 72, height: 72, borderRadius: radius.button, backgroundColor: color.border },
-  thumbRemove: {
-    position: 'absolute',
-    top: -space.xs,
-    right: -space.xs,
-    width: 20,
-    height: 20,
-    borderRadius: radius.chip,
-    backgroundColor: color.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footer: {
-    padding: space.l,
-    backgroundColor: color.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-});

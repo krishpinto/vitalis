@@ -2,6 +2,8 @@ import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import '../global.css';
+
 import { DemoWatermark } from '@/components/DemoWatermark';
 import { color, font } from '@/theme';
 

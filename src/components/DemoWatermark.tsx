@@ -3,35 +3,17 @@
 // until real-patient compliance work exists; never remove.
 
 import { TriangleAlert } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
 
 import { T } from './ui';
-import { color, space } from '@/theme';
+import { View } from '@/tw';
 
 export function DemoWatermark() {
   return (
-    <View style={styles.banner}>
-      <TriangleAlert size={12} color={color.ribbonText} strokeWidth={2.2} />
-      <T variant="caption" style={styles.text}>
+    <View className="flex-row items-center justify-center gap-2 bg-ribbon-bg py-1 px-3">
+      <TriangleAlert size={12} color="#B7791F" strokeWidth={2.2} />
+      <T variant="caption" className="font-semibold tracking-wide" style={{ color: '#B7791F' }}>
         Demo — synthetic patients only · not for clinical use
       </T>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.s,
-    backgroundColor: color.ribbonBg,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.m,
-  },
-  text: {
-    color: color.ribbonText,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-});

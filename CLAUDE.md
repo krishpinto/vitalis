@@ -28,6 +28,7 @@ second-assistant tone.
 | Layer | Status |
 |---|---|
 | Expo SDK 56, RN 0.85, React 19, TS strict, Expo Router, zustand | ✅ |
+| Styling: Tailwind v4 / NativeWind v5 / react-native-css (replaced StyleSheet) | ✅ |
 | STT: Sarvam Saaras v3, `codemix`, 7s chunked batch | ✅ Real |
 | LLM: Gemini 2.5 Flash — Call #1 structuring, Call #2 tiered DD + citations | ✅ Real |
 | Screens: Landing → Patients → Consult → Review → Diagnosis | ✅ Functional |
@@ -75,21 +76,44 @@ Everywhere else: solid white cards on off-white. No blur on lists, buttons,
 or full screens — blur is expensive on mid-range Android and stacked
 translucency looks cheap. If a fourth glass surface appears, that's a bug.
 
-### Tokens (define once in /src/theme, import everywhere — no inline hex)
-- Background: warm off-white `#FAF9F6`; cards `#FFFFFF`
-- Ink: primary text `#1A1D1F`; secondary `#5E6470`
-- Accent (one): deep teal `#0F6E6B` — actions, active states, links
-- Tier colors (muted, not traffic-light):
-  most_likely `#0F6E6B` teal / expanded `#8A6D1D` ochre / cant_miss `#8C3A32`
-  oxblood — used as thin left-border + small label chip, never full card fills
-- Semantic: red-flag banner bg `#FBEDEB` with `#8C3A32` text
-- Radius: cards 16, buttons 12, chips 999
-- Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 — no arbitrary values
-- Shadows: one subtle elevation only (y=2, blur=8, 6% opacity). No stacked
-  heavy shadows.
-- Type: Inter (or system SF/Roboto) — sizes 28 screen title / 17 body /
-  15 secondary / 13 caption, line-height 1.4. Titles semibold, never black-weight.
-- Icons: lucide-react-native only. No emoji anywhere in UI.
+### Tokens — Tailwind, not StyleSheet (no inline hex outside the two exceptions below)
+Styling runs on **Tailwind v4 / NativeWind v5 / react-native-css**, not RN's
+`StyleSheet.create`. Source of truth for every token is `src/global.css`'s
+`@theme` block — colors, radius, and the type scale are custom Tailwind
+theme keys (`bg-accent`, `rounded-card`, `text-title`, etc.), not JS constants.
+Screens/components that need `className` support import `View`/`Text`/
+`Pressable`/`ScrollView`/`TextInput` from **`@/tw`**, never straight from
+`react-native` — those are the only primitives `react-native-css` can style
+via `className` (see `src/tw/index.tsx`).
+
+- Background: warm off-white `bg-bg` (`#FAF9F6`); cards `bg-card` (`#FFFFFF`)
+- Ink: primary text `text-ink`; secondary `text-ink-secondary`
+- Accent (one): deep teal `bg-accent` / `text-accent` (`#0F6E6B`) — actions, active states, links
+- Tier colors (muted, not traffic-light): `text-tier-most-likely` teal /
+  `text-tier-expanded` ochre / `text-tier-cant-miss` oxblood — used as thin
+  left-border + small label chip, never full card fills
+- Semantic: red-flag banner `bg-red-flag-bg` with `text-red-flag-text`
+- Radius: cards `rounded-card` (16), buttons `rounded-button` (12), chips `rounded-full`
+- Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 — this is Tailwind's default scale
+  at multiples of 4 (`gap-1`…`gap-8`), so use the standard utilities directly;
+  no arbitrary spacing values.
+- Shadows: one subtle elevation only, `shadow-card` (y=2, blur=8, 6% opacity).
+  No stacked heavy shadows.
+- Type: `text-title` / `text-body` / `text-secondary` / `text-caption` /
+  `text-overline` — each a paired Tailwind size+line-height token (28/17/15/13,
+  line-height 1.4). Titles semibold, never black-weight.
+- Icons: lucide-react-native only. No emoji anywhere in UI. Icon `color` props
+  and React Navigation header options (`_layout.tsx`) are the two legitimate
+  places raw hex/`src/theme/index.ts` constants still apply — Tailwind
+  `className` doesn't reach non-JSX native config or icon props. `src/theme/
+  index.ts`'s values must stay in sync with `global.css`'s `@theme` block.
+- **Dynamic colors stay inline, never a template-literal className.** A prop
+  like a tier's arbitrary hex (`Chip`'s `tint`/`soft`, `Card`'s `accent`) is
+  passed as `style={{ color: tint }}`, not interpolated into a class string —
+  Tailwind's static scanner can't generate a rule for a value it can't see as
+  a literal. Static, finite-enum styling (a `variant` prop, a boolean `active`
+  state) is fine as a conditional className because every branch is a
+  complete literal string somewhere in the file.
 
 ### Motion
 - Screen transitions: default stack slide, nothing custom.

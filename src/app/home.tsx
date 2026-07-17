@@ -5,12 +5,10 @@
 
 import { useRouter } from 'expo-router';
 import { ChevronRight, Mic, Quote, Stethoscope, UserRoundPlus } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
-import { ScrollView } from 'react-native';
 
 import { Card, Chip, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import { color, radius, space } from '@/theme';
+import { ScrollView, View } from '@/tw';
 import type { Patient } from '@/types/clinical';
 
 function greeting() {
@@ -52,45 +50,45 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
+    <ScrollView className="flex-1 bg-bg" contentContainerClassName="p-6 gap-4 pb-8">
       {/* Greeting header */}
       <Rise index={0}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <T variant="title" style={styles.greeting}>
+        <View className="flex-row items-center gap-4">
+          <View className="flex-1">
+            <T variant="title" className="text-2xl leading-8">
               {greeting()}, Doctor
             </T>
             <T variant="secondary" tone="secondary">
               {today()}
             </T>
           </View>
-          <View style={styles.avatar}>
-            <Stethoscope size={20} color={color.accent} strokeWidth={2} />
+          <View className="w-11 h-11 rounded-full bg-accent-soft items-center justify-center">
+            <Stethoscope size={20} color="#0F6E6B" strokeWidth={2} />
           </View>
         </View>
       </Rise>
 
       {/* Action tiles — start consult is the dominant action */}
-      <View style={styles.tiles}>
+      <View className="flex-row gap-3">
         <Rise index={1} style={{ flex: 1 }}>
-          <Card onPress={() => router.push('/patients')} style={[styles.tile, styles.tilePrimary]}>
-            <View style={[styles.tileIcon, styles.tileIconPrimary]}>
-              <Mic size={20} color={color.onAccent} strokeWidth={2} />
+          <Card onPress={() => router.push('/patients')} className="gap-2 min-h-[140px] bg-accent">
+            <View className="w-10 h-10 rounded-full bg-hero-chip items-center justify-center mb-1">
+              <Mic size={20} color="#FFFFFF" strokeWidth={2} />
             </View>
-            <T variant="secondary" style={[styles.tileTitle, { color: color.onAccent }]}>
+            <T variant="secondary" className="font-semibold text-[17px] leading-[23px] text-on-accent">
               Start a{'\n'}consult
             </T>
-            <T variant="caption" style={{ color: color.onAccentSoft }}>
+            <T variant="caption" style={{ color: 'rgba(255,255,255,0.78)' }}>
               Record & get a cited draft
             </T>
           </Card>
         </Rise>
         <Rise index={2} style={{ flex: 1 }}>
-          <Card onPress={() => router.push('/new-patient')} style={styles.tile}>
-            <View style={styles.tileIcon}>
-              <UserRoundPlus size={20} color={color.accent} strokeWidth={2} />
+          <Card onPress={() => router.push('/new-patient')} className="gap-2 min-h-[140px]">
+            <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center mb-1">
+              <UserRoundPlus size={20} color="#0F6E6B" strokeWidth={2} />
             </View>
-            <T variant="secondary" style={styles.tileTitle}>
+            <T variant="secondary" className="font-semibold text-[17px] leading-[23px]">
               New{'\n'}patient
             </T>
             <T variant="caption" tone="secondary">
@@ -104,30 +102,30 @@ export default function HomeScreen() {
       <SectionHeader
         title="Recent consults"
         trailing={
-          <T variant="caption" tone="accent" style={styles.seeAll} onPress={() => router.push('/patients')}>
+          <T variant="caption" tone="accent" className="font-semibold" onPress={() => router.push('/patients')}>
             See all
           </T>
         }
       />
       {recent.map((p, i) => (
         <Rise key={p.id} index={3 + i}>
-          <Card onPress={() => openConsult(p)} style={styles.recentCard}>
-            <View style={styles.recentAvatar}>
-              <T variant="caption" style={styles.recentAvatarText}>
+          <Card onPress={() => openConsult(p)} className="flex-row items-center gap-3">
+            <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center">
+              <T variant="caption" className="font-semibold text-accent">
                 {initials(p.name)}
               </T>
             </View>
-            <View style={{ flex: 1 }}>
-              <T variant="secondary" style={styles.recentName}>
+            <View className="flex-1">
+              <T variant="secondary" className="font-semibold">
                 {p.name}
               </T>
               <T variant="caption" tone="secondary" numberOfLines={1}>
                 {p.complaint ?? 'No chief complaint recorded'}
               </T>
             </View>
-            <View style={styles.recentRight}>
-              {p.lastVisit && <Chip label={p.lastVisit} tint={color.inkSecondary} soft={color.bg} />}
-              <ChevronRight size={16} color={color.inkFaint} strokeWidth={2} />
+            <View className="flex-row items-center gap-2">
+              {p.lastVisit && <Chip label={p.lastVisit} tint="#5E6470" soft="#FAF9F6" />}
+              <ChevronRight size={16} color="#9AA0AA" strokeWidth={2} />
             </View>
           </Card>
         </Rise>
@@ -135,9 +133,9 @@ export default function HomeScreen() {
 
       {/* Quiet value-prop reminder */}
       <Rise index={6}>
-        <View style={styles.banner}>
-          <Quote size={16} color={color.accent} strokeWidth={2.2} />
-          <T variant="caption" tone="secondary" style={{ flex: 1 }}>
+        <View className="flex-row items-center gap-3 bg-accent-soft rounded-card p-4">
+          <Quote size={16} color="#0F6E6B" strokeWidth={2.2} />
+          <T variant="caption" tone="secondary" className="flex-1">
             Every suggestion in a draft is cited — tap it to hear the patient say it.
           </T>
         </View>
@@ -145,53 +143,3 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
-  scroll: { padding: space.xl, gap: space.l, paddingBottom: space.xxl },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.l },
-  greeting: { fontSize: 24, lineHeight: 32 },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tiles: { flexDirection: 'row', gap: space.m },
-  tile: { gap: space.s, minHeight: 140 },
-  tilePrimary: { backgroundColor: color.accent },
-  tileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: space.xs,
-  },
-  tileIconPrimary: { backgroundColor: color.heroChip },
-  tileTitle: { fontWeight: '600', fontSize: 17, lineHeight: 23 },
-  seeAll: { fontWeight: '600' },
-  recentCard: { flexDirection: 'row', alignItems: 'center', gap: space.m },
-  recentAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recentAvatarText: { color: color.accent, fontWeight: '600' },
-  recentName: { fontWeight: '600' },
-  recentRight: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.m,
-    backgroundColor: color.accentSoft,
-    borderRadius: radius.card,
-    padding: space.l,
-  },
-});

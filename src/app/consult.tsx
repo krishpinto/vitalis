@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Lightbulb, MessagesSquare, Mic, Square, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, type ScrollView as RNScrollView } from 'react-native';
 
 import { TranscriptView } from '@/components/TranscriptView';
 import { EmptyState, ErrorCard, PrimaryButton, Rise, T } from '@/components/ui';
@@ -21,7 +21,7 @@ import { suggestQuestions } from '@/lib/gemini';
 import { refineTranscript } from '@/lib/refine';
 import { DEMO_LINE_COUNT, demoLineAt, transcribeChunk } from '@/lib/sarvam';
 import { useConsult } from '@/lib/store';
-import { color, radius, shadow, space } from '@/theme';
+import { Pressable, ScrollView, View } from '@/tw';
 import type { AudioChunk, Speaker, Suggestion, TranscriptLine } from '@/types/clinical';
 
 type Phase = 'idle' | 'recording' | 'finishing';
@@ -70,7 +70,7 @@ export default function ConsultScreen() {
   const chunkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const demoIdx = useRef(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<RNScrollView>(null);
 
   // Recording indicator — soft opacity pulse, the only looping animation.
   const pulse = useRef(new Animated.Value(1)).current;
@@ -275,24 +275,27 @@ export default function ConsultScreen() {
   const recording = phase === 'recording';
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-bg">
       {/* Chat scrolls beneath the glass header */}
       <ScrollView
         ref={scrollRef}
-        style={styles.chat}
-        contentContainerStyle={[styles.chatContent, { paddingTop: HEADER_HEIGHT + space.l }]}>
+        className="flex-1"
+        // pt-28 = 112px = HEADER_HEIGHT (96) + 16 — kept as a static utility
+        // since Tailwind's JIT scanner can't resolve a template-interpolated
+        // arbitrary value; if HEADER_HEIGHT changes, update this too.
+        contentContainerClassName="px-4 pb-6 gap-3 flex-grow pt-28">
         {sttError &&
           (recording ? (
             // Transient mid-consult hiccup — the next 7s chunk retries on its
             // own, so keep it quiet instead of alarming the room.
-            <T variant="caption" tone="faint" style={styles.listeningNote}>
+            <T variant="caption" tone="faint" className="pl-2">
               connection hiccup — retrying with the next chunk…
             </T>
           ) : (
             <ErrorCard message={sttError} onRetry={start} />
           ))}
         {lines.length === 0 && !sttError ? (
-          <View style={styles.emptyWrap}>
+          <View className="flex-1 justify-center">
             <EmptyState
               icon={MessagesSquare}
               text={
@@ -306,7 +309,7 @@ export default function ConsultScreen() {
           <TranscriptView lines={lines} chunks={chunksRef.current} />
         )}
         {recording && listening && (
-          <T variant="caption" tone="faint" style={styles.listeningNote}>
+          <T variant="caption" tone="faint" className="pl-2">
             transcribing latest…
           </T>
         )}
@@ -314,9 +317,9 @@ export default function ConsultScreen() {
 
       {/* Glass surface #1 — consult sticky header */}
       <BlurView intensity={40} tint="light" style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <T variant="secondary" style={styles.patientName} numberOfLines={1}>
+        <View className="flex-row items-center gap-4">
+          <View className="flex-1">
+            <T variant="secondary" className="font-semibold" numberOfLines={1}>
               {patient?.name ?? 'Consult'}
             </T>
             <T variant="caption" tone="secondary">
@@ -327,17 +330,17 @@ export default function ConsultScreen() {
                   : 'Demo mode — synthetic consult'}
             </T>
           </View>
-          <View style={styles.statusRow}>
+          <View className="flex-row items-center gap-2">
             <Animated.View
               style={[
                 styles.dot,
                 {
                   opacity: recording ? pulse : 1,
-                  backgroundColor: recording ? color.recording : color.inkFaint,
+                  backgroundColor: recording ? '#8C3A32' : '#9AA0AA',
                 },
               ]}
             />
-            <T variant="body" style={styles.timer}>
+            <T variant="body" className="font-semibold" style={{ fontVariant: ['tabular-nums'] }}>
               {fmt(elapsed)}
             </T>
           </View>
@@ -349,15 +352,15 @@ export default function ConsultScreen() {
 
       {/* Glass surface #3 — in-consult suggestion cards, above the input area */}
       {suggestions.length > 0 && (
-        <View style={styles.suggestWrap} pointerEvents="box-none">
+        <View className="px-4 pb-2 gap-2" pointerEvents="box-none">
           {suggestions.map((s, i) => (
             <Rise key={s.id} index={i}>
               <BlurView intensity={24} tint="light" style={styles.suggestCard}>
-                <View style={styles.suggestIcon}>
-                  <Lightbulb size={16} color={color.accent} strokeWidth={2} />
+                <View className="w-8 h-8 rounded-full bg-accent-soft items-center justify-center">
+                  <Lightbulb size={16} color="#0F6E6B" strokeWidth={2} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <T variant="secondary" style={styles.suggestQuestion}>
+                <View className="flex-1">
+                  <T variant="secondary" className="font-semibold">
                     {s.question}
                   </T>
                   {!!s.rationale && (
@@ -370,7 +373,7 @@ export default function ConsultScreen() {
                   onPress={() => setSuggestions((prev) => prev.filter((x) => x.id !== s.id))}
                   hitSlop={8}
                   accessibilityRole="button">
-                  <X size={16} color={color.inkFaint} strokeWidth={2} />
+                  <X size={16} color="#9AA0AA" strokeWidth={2} />
                 </Pressable>
               </BlurView>
             </Rise>
@@ -379,7 +382,7 @@ export default function ConsultScreen() {
       )}
 
       {/* Controls */}
-      <View style={styles.footer}>
+      <View className="p-4 bg-card border-t border-border">
         {phase === 'finishing' ? (
           <PrimaryButton label="Finishing…" onPress={() => {}} loading />
         ) : recording ? (
@@ -393,56 +396,35 @@ export default function ConsultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
   header: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: HEADER_HEIGHT,
-    paddingHorizontal: space.xl,
-    paddingTop: space.l,
-    gap: space.xs,
-    backgroundColor: color.glassHeader,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    gap: 4,
+    backgroundColor: 'rgba(250,249,246,0.72)',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.border,
+    borderBottomColor: '#ECEAE3',
     overflow: 'hidden',
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.l },
-  patientName: { fontWeight: '600' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  dot: { width: 10, height: 10, borderRadius: radius.chip },
-  timer: { fontVariant: ['tabular-nums'], fontWeight: '600' },
-  chat: { flex: 1 },
-  chatContent: { paddingHorizontal: space.l, paddingBottom: space.xl, gap: space.m, flexGrow: 1 },
-  emptyWrap: { flex: 1, justifyContent: 'center' },
-  listeningNote: { paddingLeft: space.s },
-  suggestWrap: { paddingHorizontal: space.l, paddingBottom: space.s, gap: space.s },
+  dot: { width: 10, height: 10, borderRadius: 999 },
   suggestCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.m,
-    backgroundColor: color.glassCard,
-    borderRadius: radius.card,
-    padding: space.l,
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 16,
+    padding: 16,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
-    ...shadow,
-  },
-  suggestIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestQuestion: { fontWeight: '600' },
-  footer: {
-    padding: space.l,
-    backgroundColor: color.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
+    borderColor: '#ECEAE3',
+    shadowColor: '#1A1D1F',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

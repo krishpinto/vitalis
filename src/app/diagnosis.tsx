@@ -12,13 +12,13 @@ import {
   TriangleAlert,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { DifferentialCard, type DiffStatus } from '@/components/DifferentialCard';
 import { EvidenceModal } from '@/components/EvidenceModal';
 import { Card, EmptyState, PrimaryButton, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import { color, radius, space, tierMeta } from '@/theme';
+import { ScrollView, View } from '@/tw';
+import { tierMeta } from '@/theme';
 import type { Differential, DifferentialTier } from '@/types/clinical';
 
 const TIER_ORDER: DifferentialTier[] = ['most_likely', 'expanded', 'cant_miss'];
@@ -40,7 +40,7 @@ export default function DiagnosisScreen() {
 
   if (!diagnosis) {
     return (
-      <View style={styles.emptyScreen}>
+      <View className="flex-1 bg-bg justify-center">
         <EmptyState
           icon={FileQuestion}
           text="No differential draft yet — analyze a consult first."
@@ -57,18 +57,18 @@ export default function DiagnosisScreen() {
   let riseIndex = 0;
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-bg">
       {/* Red flags — pinned top */}
       {diagnosis.red_flags.length > 0 && (
-        <View style={styles.redBanner}>
-          <TriangleAlert size={16} color={color.redFlagText} strokeWidth={2.2} />
-          <T variant="caption" tone="danger" style={styles.redBannerText} numberOfLines={2}>
+        <View className="flex-row items-center gap-2 bg-red-flag-bg px-4 py-2">
+          <TriangleAlert size={16} color="#8C3A32" strokeWidth={2.2} />
+          <T variant="caption" tone="danger" className="flex-1 font-semibold" numberOfLines={2}>
             {diagnosis.red_flags.join('  ·  ')}
           </T>
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerClassName="p-4 gap-4 pb-6">
         <T variant="caption" tone="faint">
           Second-opinion draft — every item is grounded in the consult and guidelines. Tap Evidence
           to hear the source. Requires doctor sign-off.
@@ -78,7 +78,7 @@ export default function DiagnosisScreen() {
           const group = indexed.filter(({ d }) => d.tier === tierKey);
           if (!group.length) return null;
           return (
-            <View key={tierKey} style={styles.tierGroup}>
+            <View key={tierKey} className="gap-3">
               <SectionHeader title={tierMeta[tierKey].label} />
               {group.map(({ d, i }) => (
                 <Rise key={i} index={riseIndex++}>
@@ -99,25 +99,25 @@ export default function DiagnosisScreen() {
 
         {/* Item 3 — gap detection */}
         {diagnosis.gaps.length > 0 && (
-          <View style={styles.tierGroup}>
+          <View className="gap-3">
             <SectionHeader title="Not yet ruled out" />
             {diagnosis.gaps.map((g, i) => (
               <Rise key={i} index={riseIndex++}>
-                <Card accent={color.tierExpanded} style={styles.gapCard}>
-                  <View style={styles.gapHeader}>
-                    <SearchX size={16} color={color.tierExpanded} strokeWidth={2.2} />
-                    <T variant="secondary" style={styles.gapTitle}>
+                <Card accent="#8A6D1D" className="gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <SearchX size={16} color="#8A6D1D" strokeWidth={2.2} />
+                    <T variant="secondary" className="font-semibold">
                       {g.missedItem}
                     </T>
                   </View>
                   <T variant="secondary" tone="secondary">
                     {g.whyItMatters}
                   </T>
-                  <View style={styles.gapQuestion}>
-                    <T variant="caption" tone="secondary" style={styles.gapQuestionLabel}>
+                  <View className="bg-bg rounded-button p-3 gap-1">
+                    <T variant="caption" tone="secondary" className="font-semibold tracking-wide">
                       SUGGESTED QUESTION
                     </T>
-                    <T variant="secondary" style={{ fontStyle: 'italic' }}>
+                    <T variant="secondary" className="italic">
                       “{g.suggestedQuestion}”
                     </T>
                   </View>
@@ -129,13 +129,13 @@ export default function DiagnosisScreen() {
 
         {/* Item 4 — assessment alignment (deferential, never grading) */}
         {!!diagnosis.alignment.agreement && (
-          <View style={styles.tierGroup}>
+          <View className="gap-3">
             <SectionHeader title="Assessment alignment" />
             <Rise index={riseIndex++}>
-              <Card style={styles.gapCard}>
-                <View style={styles.gapHeader}>
-                  <HeartHandshake size={16} color={color.accent} strokeWidth={2.2} />
-                  <T variant="secondary" style={styles.gapTitle}>
+              <Card className="gap-2">
+                <View className="flex-row items-center gap-2">
+                  <HeartHandshake size={16} color="#0F6E6B" strokeWidth={2.2} />
+                  <T variant="secondary" className="font-semibold">
                     In agreement
                   </T>
                 </View>
@@ -143,9 +143,9 @@ export default function DiagnosisScreen() {
                   {diagnosis.alignment.agreement}
                 </T>
                 {diagnosis.alignment.additional_considerations.map((a, i) => (
-                  <View key={i} style={styles.considerRow}>
-                    <CircleCheck size={14} color={color.accent} strokeWidth={2.2} style={styles.considerIcon} />
-                    <T variant="secondary" tone="secondary" style={{ flex: 1 }}>
+                  <View key={i} className="flex-row gap-2 items-start">
+                    <CircleCheck size={14} color="#0F6E6B" strokeWidth={2.2} style={{ marginTop: 4 }} />
+                    <T variant="secondary" tone="secondary" className="flex-1">
                       {a}
                     </T>
                   </View>
@@ -157,14 +157,14 @@ export default function DiagnosisScreen() {
 
         {/* Suggested workup — checklist card */}
         {diagnosis.suggested_workup.length > 0 && (
-          <View style={styles.tierGroup}>
+          <View className="gap-3">
             <SectionHeader title="Suggested workup" />
             <Rise index={riseIndex++}>
-              <Card style={styles.gapCard}>
+              <Card className="gap-2">
                 {diagnosis.suggested_workup.map((w, i) => (
-                  <View key={i} style={styles.considerRow}>
-                    <ClipboardList size={14} color={color.inkSecondary} strokeWidth={2.2} style={styles.considerIcon} />
-                    <T variant="secondary" style={{ flex: 1 }}>
+                  <View key={i} className="flex-row gap-2 items-start">
+                    <ClipboardList size={14} color="#5E6470" strokeWidth={2.2} style={{ marginTop: 4 }} />
+                    <T variant="secondary" className="flex-1">
                       {w}
                     </T>
                   </View>
@@ -175,7 +175,7 @@ export default function DiagnosisScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View className="p-4 bg-card border-t border-border">
         <PrimaryButton label="Finish & start new consult" onPress={() => router.replace('/home')} />
       </View>
 
@@ -183,37 +183,3 @@ export default function DiagnosisScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
-  emptyScreen: { flex: 1, backgroundColor: color.bg, justifyContent: 'center' },
-  redBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.s,
-    backgroundColor: color.redFlagBg,
-    paddingHorizontal: space.l,
-    paddingVertical: space.s,
-  },
-  redBannerText: { flex: 1, fontWeight: '600' },
-  scroll: { padding: space.l, gap: space.l, paddingBottom: space.xl },
-  tierGroup: { gap: space.m },
-  gapCard: { gap: space.s },
-  gapHeader: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  gapTitle: { fontWeight: '600' },
-  gapQuestion: {
-    backgroundColor: color.bg,
-    borderRadius: radius.button,
-    padding: space.m,
-    gap: space.xs,
-  },
-  gapQuestionLabel: { fontWeight: '600', letterSpacing: 0.6 },
-  considerRow: { flexDirection: 'row', gap: space.s, alignItems: 'flex-start' },
-  considerIcon: { marginTop: space.xs },
-  footer: {
-    padding: space.l,
-    backgroundColor: color.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-});

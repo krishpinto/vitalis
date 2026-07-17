@@ -4,27 +4,19 @@
 import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 
 import { PrimaryButton, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import { color, font, radius, space } from '@/theme';
+import { Pressable, ScrollView, TextInput, View } from '@/tw';
 import type { Sex } from '@/types/clinical';
 
 const SEXES: Sex[] = ['Male', 'Female', 'Other'];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View style={styles.field}>
-      <T variant="caption" tone="secondary" style={styles.label}>
+    <View className="gap-2">
+      <T variant="caption" tone="secondary" className="font-semibold tracking-wide ml-1">
         {label.toUpperCase()}
       </T>
       {children}
@@ -58,11 +50,11 @@ export default function NewPatientScreen() {
     router.replace('/consult');
   }
 
+  const inputClass = 'bg-card border border-border rounded-button px-4 py-3 text-body text-ink';
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#FAF9F6' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerClassName="p-6 gap-4 pb-6" keyboardShouldPersistTaps="handled">
         <T variant="title">New patient</T>
         <T variant="secondary" tone="secondary">
           Synthetic record — do not enter real patient data.
@@ -70,48 +62,45 @@ export default function NewPatientScreen() {
 
         <Field label="Full name">
           <TextInput
-            style={styles.input}
+            className={inputClass}
             value={name}
             onChangeText={setName}
             placeholder="e.g. Rahul Sharma"
-            placeholderTextColor={color.inkFaint}
+            placeholderTextColor="#9AA0AA"
             autoFocus
           />
         </Field>
 
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
+        <View className="flex-row gap-3">
+          <View className="flex-1">
             <Field label="Age">
               <TextInput
-                style={styles.input}
+                className={inputClass}
                 value={age}
                 onChangeText={setAge}
                 placeholder="34"
-                placeholderTextColor={color.inkFaint}
+                placeholderTextColor="#9AA0AA"
                 keyboardType="number-pad"
                 maxLength={3}
               />
             </Field>
           </View>
-          <View style={{ flex: 2 }}>
+          <View className="flex-[2]">
             <Field label="Sex">
-              <View style={styles.segment}>
+              <View className="flex-row bg-card border border-border rounded-button p-1">
                 {SEXES.map((s) => {
                   const active = sex === s;
                   return (
                     <Pressable
                       key={s}
                       accessibilityRole="button"
-                      style={({ pressed }) => [
-                        styles.segmentItem,
-                        active && styles.segmentItemActive,
-                        pressed && styles.pressed,
-                      ]}
+                      className={`flex-1 py-2 rounded-[8px] items-center ${active ? 'bg-accent' : ''}`}
+                      style={({ pressed }) => pressed && { transform: [{ scale: 0.98 }] }}
                       onPress={() => setSex(s)}>
                       <T
                         variant="secondary"
                         tone={active ? 'onAccent' : 'secondary'}
-                        style={active && styles.segmentTextActive}>
+                        className={active ? 'font-semibold' : ''}>
                         {s}
                       </T>
                     </Pressable>
@@ -124,61 +113,20 @@ export default function NewPatientScreen() {
 
         <Field label="Chief complaint (optional)">
           <TextInput
-            style={[styles.input, styles.multiline]}
+            className={`${inputClass} min-h-[72px]`}
+            style={{ textAlignVertical: 'top' }}
             value={complaint}
             onChangeText={setComplaint}
             placeholder="e.g. Fever & body ache · 3 days"
-            placeholderTextColor={color.inkFaint}
+            placeholderTextColor="#9AA0AA"
             multiline
           />
         </Field>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View className="p-4 bg-card border-t border-border">
         <PrimaryButton label="Save & start consult" onPress={save} disabled={!canSave} icon={ArrowRight} />
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
-  scroll: { padding: space.xl, gap: space.l, paddingBottom: space.xl },
-  field: { gap: space.s },
-  label: { fontWeight: '600', letterSpacing: 0.6, marginLeft: space.xs },
-  input: {
-    backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.button,
-    paddingHorizontal: space.l,
-    paddingVertical: space.m,
-    ...font.body,
-    color: color.ink,
-  },
-  multiline: { minHeight: 72, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: space.m },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.button,
-    padding: space.xs,
-  },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: space.s,
-    borderRadius: radius.button - space.xs,
-    alignItems: 'center',
-  },
-  segmentItemActive: { backgroundColor: color.accent },
-  segmentTextActive: { fontWeight: '600' },
-  pressed: { transform: [{ scale: 0.98 }] },
-  footer: {
-    padding: space.l,
-    backgroundColor: color.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
-});

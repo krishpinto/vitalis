@@ -4,18 +4,17 @@
 
 import { Play, Square } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
 
 import { T } from './ui';
 import { onPlaybackChange, playClip } from '@/lib/audio';
 import { chunkForLine } from '@/lib/evidence';
-import { color, radius, shadow, space } from '@/theme';
+import { Pressable, View } from '@/tw';
 import type { AudioChunk, Speaker, TranscriptLine } from '@/types/clinical';
 
-const SPEAKER_META: Record<Speaker, { name: string; bubble: string }> = {
-  Doctor: { name: 'Doctor', bubble: color.card },
-  Patient: { name: 'Patient', bubble: color.accentSoft },
-  Unknown: { name: 'Speaker', bubble: color.card },
+const SPEAKER_META: Record<Speaker, { name: string; bubbleClass: string }> = {
+  Doctor: { name: 'Doctor', bubbleClass: 'bg-card' },
+  Patient: { name: 'Patient', bubbleClass: 'bg-accent-soft' },
+  Unknown: { name: 'Speaker', bubbleClass: 'bg-card' },
 };
 
 function fmtTime(sec?: number) {
@@ -43,22 +42,20 @@ export function ChatBubble({
 
   const bubble = (
     <View
-      style={[
-        styles.bubble,
-        { backgroundColor: meta.bubble },
-        isPatient ? styles.bubbleRight : styles.bubbleLeft,
-      ]}>
-      <View style={styles.bubbleInner}>
+      className={`py-3 px-4 rounded-card shadow-card ${meta.bubbleClass} ${
+        isPatient ? 'rounded-br-md' : 'rounded-bl-md'
+      }`}>
+      <View className="flex-row items-center gap-2">
         {clipUri && (
-          <View style={styles.playIcon}>
+          <View className="w-[22px] h-[22px] rounded-full bg-card items-center justify-center">
             {playing ? (
-              <Square size={12} color={color.accent} fill={color.accent} strokeWidth={2} />
+              <Square size={12} color="#0F6E6B" fill="#0F6E6B" strokeWidth={2} />
             ) : (
-              <Play size={12} color={color.accent} fill={color.accent} strokeWidth={2} />
+              <Play size={12} color="#0F6E6B" fill="#0F6E6B" strokeWidth={2} />
             )}
           </View>
         )}
-        <T variant="secondary" style={styles.bubbleText}>
+        <T variant="secondary" className="shrink">
           {line.text}
         </T>
       </View>
@@ -66,10 +63,10 @@ export function ChatBubble({
   );
 
   return (
-    <View style={[styles.row, { alignItems: isPatient ? 'flex-end' : 'flex-start' }]}>
+    <View className="gap-1" style={{ alignItems: isPatient ? 'flex-end' : 'flex-start' }}>
       {showName && (
-        <View style={styles.nameRow}>
-          <T variant="caption" tone="accent" style={styles.name}>
+        <View className="flex-row items-baseline gap-2 px-1 mt-2">
+          <T variant="caption" tone="accent" className="font-semibold">
             {meta.name}
           </T>
           {time && (
@@ -83,28 +80,23 @@ export function ChatBubble({
         <Pressable
           onPress={() => playClip(clipUri)}
           accessibilityRole="button"
-          style={({ pressed }) => [styles.bubbleWrap, pressed && styles.pressed]}>
+          className="max-w-[84%]"
+          style={({ pressed }) => pressed && { transform: [{ scale: 0.98 }] }}>
           {bubble}
         </Pressable>
       ) : (
-        <View style={styles.bubbleWrap}>{bubble}</View>
+        <View className="max-w-[84%]">{bubble}</View>
       )}
     </View>
   );
 }
 
-export function TranscriptView({
-  lines,
-  chunks = [],
-}: {
-  lines: TranscriptLine[];
-  chunks?: AudioChunk[];
-}) {
+export function TranscriptView({ lines, chunks = [] }: { lines: TranscriptLine[]; chunks?: AudioChunk[] }) {
   const [playingUri, setPlayingUri] = useState<string | null>(null);
   useEffect(() => onPlaybackChange(setPlayingUri), []);
 
   return (
-    <View style={styles.container}>
+    <View className="gap-2">
       {lines.map((line, i) => {
         const clip = chunkForLine(line, chunks);
         return (
@@ -120,36 +112,3 @@ export function TranscriptView({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { gap: space.s },
-  row: { gap: space.xs },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: space.s,
-    paddingHorizontal: space.xs,
-    marginTop: space.s,
-  },
-  name: { fontWeight: '600' },
-  bubbleWrap: { maxWidth: '84%' },
-  pressed: { transform: [{ scale: 0.98 }] },
-  bubble: {
-    paddingVertical: space.m,
-    paddingHorizontal: space.l,
-    borderRadius: radius.card,
-    ...shadow,
-  },
-  bubbleLeft: { borderBottomLeftRadius: radius.button / 2 },
-  bubbleRight: { borderBottomRightRadius: radius.button / 2 },
-  bubbleInner: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  playIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.chip,
-    backgroundColor: color.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bubbleText: { flexShrink: 1 },
-});

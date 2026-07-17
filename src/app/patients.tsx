@@ -6,11 +6,10 @@
 import { useRouter } from 'expo-router';
 import { CalendarClock, Plus, Search, Users } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Card, Chip, EmptyState, PrimaryButton, Rise, SectionHeader, T } from '@/components/ui';
 import { useConsult } from '@/lib/store';
-import { color, font, radius, shadow, space } from '@/theme';
+import { Pressable, ScrollView, TextInput, View } from '@/tw';
 import type { Patient } from '@/types/clinical';
 
 function initials(name: string) {
@@ -43,17 +42,17 @@ export default function PatientsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <View className="flex-1 bg-bg">
+      <ScrollView contentContainerClassName="p-6 gap-3 pb-28" keyboardShouldPersistTaps="handled">
         {/* Search */}
-        <View style={styles.searchBox}>
-          <Search size={16} color={color.inkFaint} strokeWidth={2} />
+        <View className="flex-row items-center gap-2 bg-card border border-border rounded-button px-4">
+          <Search size={16} color="#9AA0AA" strokeWidth={2} />
           <TextInput
-            style={styles.searchInput}
+            className="flex-1 py-3 text-secondary text-ink"
             value={query}
             onChangeText={setQuery}
             placeholder="Search patients or complaints"
-            placeholderTextColor={color.inkFaint}
+            placeholderTextColor="#9AA0AA"
             returnKeyType="search"
           />
         </View>
@@ -65,7 +64,7 @@ export default function PatientsScreen() {
             icon={Users}
             text={
               q
-                ? `No patients match “${query.trim()}”.`
+                ? `No patients match "${query.trim()}".`
                 : 'No patients yet — add your first patient to begin.'
             }
             actionLabel={q ? undefined : 'New patient'}
@@ -74,15 +73,15 @@ export default function PatientsScreen() {
         ) : (
           filtered.map((p, i) => (
             <Rise key={p.id} index={i}>
-              <Card style={styles.patientCard}>
-                <View style={styles.topRow}>
-                  <View style={styles.avatar}>
-                    <T variant="secondary" style={styles.avatarText}>
+              <Card className="gap-3">
+                <View className="flex-row items-center gap-3">
+                  <View className="w-11 h-11 rounded-full bg-accent-soft items-center justify-center">
+                    <T variant="secondary" className="text-accent font-semibold">
                       {initials(p.name)}
                     </T>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <T variant="body" style={styles.name}>
+                  <View className="flex-1">
+                    <T variant="body" className="font-semibold">
                       {p.name}
                     </T>
                     <T variant="caption" tone="secondary">
@@ -91,17 +90,12 @@ export default function PatientsScreen() {
                     </T>
                   </View>
                   {p.lastVisit && (
-                    <Chip
-                      label={p.lastVisit}
-                      icon={CalendarClock}
-                      tint={color.inkSecondary}
-                      soft={color.bg}
-                    />
+                    <Chip label={p.lastVisit} icon={CalendarClock} tint="#5E6470" soft="#FAF9F6" />
                   )}
                 </View>
 
                 {p.complaint && (
-                  <View style={styles.chipRow}>
+                  <View className="flex-row flex-wrap gap-2">
                     <Chip label={p.complaint} />
                   </View>
                 )}
@@ -109,7 +103,7 @@ export default function PatientsScreen() {
                 <PrimaryButton
                   label="Start consult"
                   onPress={() => openConsult(p)}
-                  style={styles.consultBtn}
+                  className="min-h-[44px] py-3"
                 />
               </Card>
             </Rise>
@@ -122,57 +116,10 @@ export default function PatientsScreen() {
         onPress={() => router.push('/new-patient')}
         accessibilityRole="button"
         accessibilityLabel="New patient"
-        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}>
-        <Plus size={26} color={color.onAccent} strokeWidth={2.2} />
+        className="absolute right-6 bottom-8 w-14 h-14 rounded-full bg-accent items-center justify-center shadow-card"
+        style={({ pressed }) => pressed && { transform: [{ scale: 0.98 }] }}>
+        <Plus size={26} color="#FFFFFF" strokeWidth={2.2} />
       </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.bg },
-  scroll: { padding: space.xl, gap: space.m, paddingBottom: 112 },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.s,
-    backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.button,
-    paddingHorizontal: space.l,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: space.m,
-    ...font.secondary,
-    color: color.ink,
-  },
-  patientCard: { gap: space.m },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: space.m },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: color.accent, fontWeight: '600' },
-  name: { fontWeight: '600' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
-  consultBtn: { minHeight: 44, paddingVertical: space.m },
-  fab: {
-    position: 'absolute',
-    right: space.xl,
-    bottom: space.xxl,
-    width: 56,
-    height: 56,
-    borderRadius: radius.chip,
-    backgroundColor: color.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow,
-  },
-  fabPressed: { transform: [{ scale: 0.98 }] },
-});

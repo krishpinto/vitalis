@@ -3,22 +3,21 @@
 
 import { Clock, Eye, History, Pill, Thermometer } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
 
 import { Card, Chip, T } from '@/components/ui';
-import { color, space } from '@/theme';
+import { View } from '@/tw';
 import type { StructuredEntities } from '@/types/clinical';
 
 function ChipGroup({ title, icon, items }: { title: string; icon: LucideIcon; items: string[] }) {
   if (!items.length) return null;
   return (
-    <View style={styles.group}>
-      <T variant="caption" tone="secondary" style={styles.groupLabel}>
+    <View className="gap-2">
+      <T variant="caption" tone="secondary" className="font-semibold tracking-wide">
         {title.toUpperCase()}
       </T>
-      <View style={styles.chips}>
+      <View className="flex-row flex-wrap gap-2">
         {items.map((item, i) => (
-          <Chip key={i} label={item} icon={icon} tint={color.ink} soft={color.bg} style={styles.chip} />
+          <Chip key={i} label={item} icon={icon} tint="#1A1D1F" soft="#FAF9F6" className="py-2" />
         ))}
       </View>
     </View>
@@ -27,7 +26,7 @@ function ChipGroup({ title, icon, items }: { title: string; icon: LucideIcon; it
 
 export function EntityCard({ entities }: { entities: StructuredEntities }) {
   return (
-    <Card style={styles.card}>
+    <Card className="gap-4">
       <ChipGroup title="Symptoms" icon={Thermometer} items={entities.symptoms} />
       <ChipGroup title="Duration" icon={Clock} items={entities.duration ? [entities.duration] : []} />
       <ChipGroup title="History" icon={History} items={entities.history} />
@@ -36,11 +35,3 @@ export function EntityCard({ entities }: { entities: StructuredEntities }) {
     </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: space.l },
-  group: { gap: space.s },
-  groupLabel: { fontWeight: '600', letterSpacing: 0.6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s },
-  chip: { paddingVertical: space.s },
-});

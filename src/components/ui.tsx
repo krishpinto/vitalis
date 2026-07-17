@@ -1,51 +1,57 @@
 // The shared component kit — the ONLY Card / PrimaryButton / Chip / SectionHeader
 // in the app. Screens compose these; a screen inventing its own variant is a bug.
+//
+// Styled with Tailwind (NativeWind v5 / react-native-css) via the CSS-enabled
+// primitives in @/tw. Static, token-driven styling lives in className; only
+// genuinely dynamic runtime values (an arbitrary tier hex passed as a prop,
+// the entrance-animation interpolation) stay as inline `style` — Tailwind's
+// JIT scanner can't generate a rule for a color it can't see as a literal.
 
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Animated, Easing, type StyleProp, type ViewStyle } from 'react-native';
 
-import { color, font, radius, shadow, space } from '@/theme';
+import { cn } from '@/lib/cn';
+import { Pressable, ScrollView, Text, View } from '@/tw';
 
 // ---------------------------------------------------------------------------
 // Text
 // ---------------------------------------------------------------------------
 
 type Variant = 'title' | 'body' | 'secondary' | 'caption' | 'overline';
+type Tone = 'primary' | 'secondary' | 'faint' | 'accent' | 'onAccent' | 'danger';
+
+const variantClass: Record<Variant, string> = {
+  title: 'text-title font-semibold',
+  body: 'text-body',
+  secondary: 'text-secondary',
+  caption: 'text-caption',
+  overline: 'text-overline font-semibold tracking-wide',
+};
+
+const toneClass: Record<Tone, string> = {
+  primary: 'text-ink',
+  secondary: 'text-ink-secondary',
+  faint: 'text-ink-faint',
+  accent: 'text-accent',
+  onAccent: 'text-on-accent',
+  danger: 'text-red-flag-text',
+};
 
 export function T({
   variant = 'body',
   tone = 'primary',
-  style,
+  className = '',
   children,
   ...rest
 }: {
   variant?: Variant;
-  tone?: 'primary' | 'secondary' | 'faint' | 'accent' | 'onAccent' | 'danger';
-  style?: StyleProp<TextStyle>;
+  tone?: Tone;
+  className?: string;
   children?: React.ReactNode;
 } & React.ComponentProps<typeof Text>) {
-  const toneColor = {
-    primary: color.ink,
-    secondary: color.inkSecondary,
-    faint: color.inkFaint,
-    accent: color.accent,
-    onAccent: color.onAccent,
-    danger: color.redFlagText,
-  }[tone];
   return (
-    <Text {...rest} style={[font[variant], { color: toneColor }, style]}>
+    <Text {...rest} className={cn(variantClass[variant], toneClass[tone], className)}>
       {children}
     </Text>
   );
@@ -58,26 +64,32 @@ export function T({
 export function Card({
   children,
   style,
+  className = '',
   onPress,
   accent,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  className?: string;
   onPress?: () => void;
-  /** Optional thin left-border accent (tier colors). */
+  /** Optional thin left-border accent (tier colors) — dynamic, so it stays inline. */
   accent?: string;
 }) {
-  const base: StyleProp<ViewStyle> = [
-    styles.card,
-    accent ? { borderLeftWidth: 3, borderLeftColor: accent } : null,
-    style,
-  ];
-  if (!onPress) return <View style={base}>{children}</View>;
+  const accentStyle: StyleProp<ViewStyle> = accent ? { borderLeftWidth: 3, borderLeftColor: accent } : null;
+  const base = cn('bg-card rounded-card p-4 shadow-card', className);
+  if (!onPress) {
+    return (
+      <View className={base} style={[accentStyle, style]}>
+        {children}
+      </View>
+    );
+  }
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [base, pressed && styles.pressed]}>
+      className={base}
+      style={({ pressed }) => [accentStyle, style, pressed && { transform: [{ scale: 0.98 }] }]}>
       {children}
     </Pressable>
   );
@@ -87,6 +99,20 @@ export function Card({
 // PrimaryButton
 // ---------------------------------------------------------------------------
 
+const buttonVariantClass: Record<'solid' | 'quiet' | 'danger' | 'inverse', string> = {
+  solid: 'bg-accent',
+  danger: 'bg-tier-cant-miss',
+  inverse: 'bg-card',
+  quiet: 'bg-accent-soft',
+};
+
+const buttonTextClass: Record<'solid' | 'quiet' | 'danger' | 'inverse', string> = {
+  solid: 'text-on-accent',
+  danger: 'text-on-accent',
+  inverse: 'text-accent',
+  quiet: 'text-accent',
+};
+
 export function PrimaryButton({
   label,
   onPress,
@@ -95,6 +121,7 @@ export function PrimaryButton({
   icon: Icon,
   variant = 'solid',
   style,
+  className = '',
 }: {
   label: string;
   onPress: () => void;
@@ -103,35 +130,29 @@ export function PrimaryButton({
   icon?: LucideIcon;
   variant?: 'solid' | 'quiet' | 'danger' | 'inverse';
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }) {
-  const bg =
-    variant === 'solid'
-      ? color.accent
-      : variant === 'danger'
-        ? color.tierCantMiss
-        : variant === 'inverse'
-          ? color.card
-          : color.accentSoft;
-  const fg = variant === 'quiet' || variant === 'inverse' ? color.accent : color.onAccent;
+  const iconColor = disabled ? '#9AA0AA' : variant === 'quiet' || variant === 'inverse' ? '#0F6E6B' : '#FFFFFF';
+  const base = cn(
+    'rounded-button py-4 px-6 items-center justify-center min-h-[52px]',
+    disabled ? 'bg-disabled-bg' : buttonVariantClass[variant],
+    className
+  );
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: disabled ? color.disabledBg : bg },
-        pressed && styles.pressed,
-        style,
-      ]}>
+      className={base}
+      style={({ pressed }) => [style, pressed && { transform: [{ scale: 0.98 }] }]}>
       {loading ? (
-        <ActivityIndicator color={fg} />
+        <ActivityIndicator color={iconColor} />
       ) : (
-        <View style={styles.buttonRow}>
-          {Icon && <Icon size={18} color={disabled ? color.inkFaint : fg} strokeWidth={2.2} />}
-          <T variant="secondary" style={{ color: disabled ? color.inkFaint : fg, fontWeight: '600' }}>
+        <View className="flex-row items-center gap-2">
+          {Icon && <Icon size={18} color={iconColor} strokeWidth={2.2} />}
+          <Text className={cn('text-secondary font-semibold', disabled ? 'text-ink-faint' : buttonTextClass[variant])}>
             {label}
-          </T>
+          </Text>
         </View>
       )}
     </Pressable>
@@ -144,25 +165,29 @@ export function PrimaryButton({
 
 export function Chip({
   label,
-  tint = color.accent,
-  soft = color.accentSoft,
+  tint = '#0F6E6B',
+  soft = '#EAF4F3',
   icon: Icon,
   style,
+  className = '',
 }: {
   label: string;
-  /** Text/icon color. */
+  /** Text/icon color — dynamic (tier colors), so it stays inline. */
   tint?: string;
-  /** Background. */
+  /** Background — dynamic, so it stays inline. */
   soft?: string;
   icon?: LucideIcon;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }) {
   return (
-    <View style={[styles.chip, { backgroundColor: soft }, style]}>
+    <View
+      className={cn('flex-row items-center gap-1 rounded-full px-3 py-1 self-start', className)}
+      style={[{ backgroundColor: soft }, style]}>
       {Icon && <Icon size={13} color={tint} strokeWidth={2.2} />}
-      <T variant="caption" style={{ color: tint, fontWeight: '600' }}>
+      <Text className="text-caption font-semibold" style={{ color: tint }}>
         {label}
-      </T>
+      </Text>
     </View>
   );
 }
@@ -175,13 +200,15 @@ export function SectionHeader({
   title,
   trailing,
   style,
+  className = '',
 }: {
   title: string;
   trailing?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }) {
   return (
-    <View style={[styles.sectionHeader, style]}>
+    <View className={cn('flex-row items-center justify-between mt-2', className)} style={style}>
       <T variant="overline" tone="secondary">
         {title.toUpperCase()}
       </T>
@@ -196,10 +223,10 @@ export function SectionHeader({
 
 export function SkeletonCard({ lines = 3 }: { lines?: number }) {
   return (
-    <View style={[styles.card, { gap: space.m }]}>
-      <View style={[styles.skeletonBar, { width: '45%' }]} />
+    <View className="bg-card rounded-card p-4 shadow-card gap-3">
+      <View className="h-3.5 rounded-button bg-border w-[45%]" />
       {Array.from({ length: lines }).map((_, i) => (
-        <View key={i} style={[styles.skeletonBar, { width: i % 2 ? '90%' : '70%' }]} />
+        <View key={i} className={`h-3.5 rounded-button bg-border ${i % 2 ? 'w-[90%]' : 'w-[70%]'}`} />
       ))}
     </View>
   );
@@ -221,15 +248,15 @@ export function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        <Icon size={26} color={color.accent} strokeWidth={1.8} />
+    <View className="items-center justify-center gap-3 px-8 py-8">
+      <View className="w-14 h-14 rounded-full bg-accent-soft items-center justify-center">
+        <Icon size={26} color="#0F6E6B" strokeWidth={1.8} />
       </View>
-      <T variant="secondary" tone="secondary" style={{ textAlign: 'center' }}>
+      <T variant="secondary" tone="secondary" className="text-center">
         {text}
       </T>
       {actionLabel && onAction && (
-        <PrimaryButton label={actionLabel} onPress={onAction} variant="quiet" style={{ alignSelf: 'center' }} />
+        <PrimaryButton label={actionLabel} onPress={onAction} variant="quiet" className="self-center" />
       )}
     </View>
   );
@@ -239,21 +266,15 @@ export function EmptyState({
 // Inline error card with retry — never Alert.alert.
 // ---------------------------------------------------------------------------
 
-export function ErrorCard({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+export function ErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <View style={[styles.card, styles.errorCard]}>
-      <T variant="secondary" tone="danger" style={{ flex: 1 }} numberOfLines={3}>
+    <View className="bg-red-flag-bg rounded-card p-4 flex-row items-center gap-4">
+      <T variant="secondary" tone="danger" className="flex-1" numberOfLines={3}>
         {message}
       </T>
       {onRetry && (
         <Pressable onPress={onRetry} accessibilityRole="button" hitSlop={8}>
-          <T variant="secondary" tone="danger" style={{ fontWeight: '600' }}>
+          <T variant="secondary" tone="danger" className="font-semibold">
             Retry
           </T>
         </Pressable>
@@ -264,6 +285,8 @@ export function ErrorCard({
 
 // ---------------------------------------------------------------------------
 // Entrance — fade + 4px rise, 150ms, staggered 40ms per index. Runs once.
+// Kept on RN's built-in Animated (runtime-interpolated values) rather than
+// Tailwind — there's no static class for an animated value.
 // ---------------------------------------------------------------------------
 
 export function Rise({
@@ -298,63 +321,3 @@ export function Rise({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: color.card,
-    borderRadius: radius.card,
-    padding: space.l,
-    ...shadow,
-  },
-  pressed: { transform: [{ scale: 0.98 }] },
-  button: {
-    borderRadius: radius.button,
-    paddingVertical: space.l,
-    paddingHorizontal: space.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    borderRadius: radius.chip,
-    paddingHorizontal: space.m,
-    paddingVertical: space.xs,
-    alignSelf: 'flex-start',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: space.s,
-  },
-  skeletonBar: {
-    height: 14,
-    borderRadius: radius.button,
-    backgroundColor: color.border,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.m,
-    paddingHorizontal: space.xxl,
-    paddingVertical: space.xxl,
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.l,
-    backgroundColor: color.redFlagBg,
-  },
-});

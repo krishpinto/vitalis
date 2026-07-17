@@ -6,13 +6,14 @@
 import { BlurView } from 'expo-blur';
 import { BookOpen, Play, Square } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet } from 'react-native';
 
 import { PrimaryButton, T } from '@/components/ui';
 import { onPlaybackChange, playClip, stopClip } from '@/lib/audio';
 import { chunkForLine, findLineForQuote } from '@/lib/evidence';
 import { useConsult } from '@/lib/store';
-import { color, radius, space, tierMeta } from '@/theme';
+import { Pressable, ScrollView, View } from '@/tw';
+import { tierMeta } from '@/theme';
 import type { Differential } from '@/types/clinical';
 
 interface Props {
@@ -33,28 +34,29 @@ function QuoteBlock({
   playing?: boolean;
 }) {
   return (
-    <View style={styles.quoteBlock}>
-      <View style={styles.quoteLabelRow}>
-        <BookOpen size={13} color={color.inkSecondary} strokeWidth={2.2} />
-        <T variant="caption" tone="secondary" style={styles.quoteLabel}>
+    <View className="gap-2 mt-2">
+      <View className="flex-row items-center gap-1">
+        <BookOpen size={13} color="#5E6470" strokeWidth={2.2} />
+        <T variant="caption" tone="secondary" className="font-semibold tracking-wide">
           {label.toUpperCase()}
         </T>
       </View>
-      <View style={styles.quoteBox}>
+      <View className="flex-row items-center gap-3 border-l-[3px] border-l-accent bg-bg rounded-button p-4">
         {clipUri && (
           <Pressable
             onPress={() => playClip(clipUri)}
             accessibilityRole="button"
             accessibilityLabel="Play audio clip"
-            style={({ pressed }) => [styles.playBtn, pressed && styles.pressed]}>
+            className="w-10 h-10 rounded-full bg-accent items-center justify-center"
+            style={({ pressed }) => pressed && { transform: [{ scale: 0.98 }] }}>
             {playing ? (
-              <Square size={16} color={color.onAccent} fill={color.onAccent} strokeWidth={2} />
+              <Square size={16} color="#FFFFFF" fill="#FFFFFF" strokeWidth={2} />
             ) : (
-              <Play size={16} color={color.onAccent} fill={color.onAccent} strokeWidth={2} />
+              <Play size={16} color="#FFFFFF" fill="#FFFFFF" strokeWidth={2} />
             )}
           </Pressable>
         )}
-        <T variant="secondary" style={styles.quoteText}>
+        <T variant="secondary" className="flex-1 italic">
           “{quote}”
         </T>
       </View>
@@ -84,18 +86,18 @@ export function EvidenceModal({ differential, visible, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <BlurView intensity={16} tint="dark" style={styles.backdropBlur}>
-        <Pressable style={styles.backdrop} onPress={close}>
-          <Pressable style={styles.sheetWrap} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.sheet}>
-              <View style={styles.handle} />
+        <Pressable className="flex-1 justify-end" style={styles.backdrop} onPress={close}>
+          <Pressable className="w-full" onPress={(e) => e.stopPropagation()}>
+            <View className="bg-card rounded-t-[24px] px-6 pt-3 pb-6 max-h-[85%] gap-4">
+              <View className="self-center w-10 h-1 rounded-full bg-border-strong" />
               {differential && (
-                <ScrollView contentContainerStyle={styles.content}>
+                <ScrollView contentContainerClassName="gap-3 pb-2">
                   {tier && (
-                    <T variant="caption" style={[styles.tierLabel, { color: tier.color }]}>
+                    <T variant="caption" className="font-semibold tracking-wide" style={{ color: tier.color }}>
                       {tier.label.toUpperCase()}
                     </T>
                   )}
-                  <T variant="title" style={styles.title}>
+                  <T variant="title" className="text-2xl leading-[31px]">
                     {differential.diagnosis}
                   </T>
                   <T variant="secondary" tone="secondary">
@@ -126,48 +128,5 @@ export function EvidenceModal({ differential, visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   backdropBlur: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
-  sheetWrap: { width: '100%' },
-  sheet: {
-    backgroundColor: color.card,
-    borderTopLeftRadius: radius.card + space.s,
-    borderTopRightRadius: radius.card + space.s,
-    padding: space.xl,
-    paddingTop: space.m,
-    maxHeight: '85%',
-    gap: space.l,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: radius.chip,
-    backgroundColor: color.borderStrong,
-  },
-  content: { gap: space.m, paddingBottom: space.s },
-  tierLabel: { fontWeight: '600', letterSpacing: 0.6 },
-  title: { fontSize: 24, lineHeight: 31 },
-  quoteBlock: { gap: space.s, marginTop: space.s },
-  quoteLabelRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  quoteLabel: { fontWeight: '600', letterSpacing: 0.6 },
-  quoteBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.m,
-    borderLeftWidth: 3,
-    borderLeftColor: color.accent,
-    backgroundColor: color.bg,
-    borderRadius: radius.button,
-    padding: space.l,
-  },
-  playBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.chip,
-    backgroundColor: color.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: { transform: [{ scale: 0.98 }] },
-  quoteText: { flex: 1, fontStyle: 'italic' },
+  backdrop: { backgroundColor: 'rgba(26,29,31,0.35)' },
 });

@@ -5,11 +5,11 @@
 
 import { useRouter } from 'expo-router';
 import { AudioLines, FileSearch, Quote, Stethoscope } from 'lucide-react-native';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Card, PrimaryButton, Rise, T } from '@/components/ui';
-import { color, radius, space } from '@/theme';
+import { View } from '@/tw';
 
 const FEATURES = [
   {
@@ -33,19 +33,14 @@ const FEATURES = [
 function WaveLines({ width, height }: { width: number; height: number }) {
   const lines = Array.from({ length: 6 });
   return (
-    <Svg
-      width={width}
-      height={height}
-      style={StyleSheet.absoluteFill}
-      pointerEvents="none"
-      aria-hidden>
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none" aria-hidden>
       {lines.map((_, i) => {
         const lift = i * (height / 9);
         return (
           <Path
             key={i}
             d={`M ${-width * 0.1} ${height * 1.05 - lift} Q ${width * 0.35} ${height * 0.55 - lift} ${width * 1.1} ${height * 0.75 - lift}`}
-            stroke={color.heroLine}
+            stroke="rgba(255,255,255,0.10)"
             strokeWidth={1}
             fill="none"
           />
@@ -61,28 +56,28 @@ export default function LandingScreen() {
   const heroHeight = Math.max(height * 0.46, 340);
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-accent">
       {/* Hero — the only full-accent surface in the app */}
-      <View style={[styles.hero, { height: heroHeight }]}>
+      <View className="bg-accent px-6 pt-6 pb-12" style={{ height: heroHeight }}>
         <WaveLines width={width} height={heroHeight} />
 
         <Rise index={0}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Stethoscope size={18} color={color.onAccent} strokeWidth={2} />
+          <View className="flex-row items-center gap-3">
+            <View className="w-9 h-9 rounded-button bg-hero-chip items-center justify-center">
+              <Stethoscope size={18} color="#FFFFFF" strokeWidth={2} />
             </View>
-            <T variant="overline" style={styles.brandName}>
+            <T variant="overline" className="tracking-[1.4px]" style={{ color: 'rgba(255,255,255,0.78)' }}>
               SECOND OPINION
             </T>
           </View>
         </Rise>
 
-        <View style={styles.heroBody}>
+        <View className="flex-1 justify-end gap-6">
           <Rise index={1}>
-            <T variant="title" style={styles.headline}>
+            <T variant="title" className="text-[30px] leading-[39px]" style={{ color: 'rgba(255,255,255,0.78)' }}>
               AI scribes write down{'\n'}what happened.
             </T>
-            <T variant="title" style={[styles.headline, styles.headlineAccent]}>
+            <T variant="title" className="text-[30px] leading-[39px] text-on-accent">
               We catch what didn't.
             </T>
           </Rise>
@@ -91,23 +86,23 @@ export default function LandingScreen() {
               label="Get started"
               onPress={() => router.push('/home')}
               variant="inverse"
-              style={styles.cta}
+              className="self-start px-8"
             />
           </Rise>
         </View>
       </View>
 
       {/* Content sheet rising over the hero */}
-      <View style={styles.sheet}>
-        <View style={styles.grabber} />
+      <View className="flex-1 bg-bg rounded-t-[24px] -mt-[24px] px-6 pb-6 gap-3">
+        <View className="self-center w-10 h-1 rounded-full bg-border-strong mt-3 mb-2" />
         {FEATURES.map((f, i) => (
           <Rise key={f.title} index={3 + i}>
-            <Card style={styles.feature}>
-              <View style={styles.featureIcon}>
-                <f.icon size={18} color={color.accent} strokeWidth={2} />
+            <Card className="flex-row items-center gap-4">
+              <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center">
+                <f.icon size={18} color="#0F6E6B" strokeWidth={2} />
               </View>
-              <View style={{ flex: 1 }}>
-                <T variant="secondary" style={styles.featureTitle}>
+              <View className="flex-1">
+                <T variant="secondary" className="font-semibold">
                   {f.title}
                 </T>
                 <T variant="caption" tone="secondary">
@@ -117,66 +112,11 @@ export default function LandingScreen() {
             </Card>
           </Rise>
         ))}
-        <View style={{ flex: 1 }} />
-        <T variant="caption" tone="faint" style={styles.footnote}>
+        <View className="flex-1" />
+        <T variant="caption" tone="faint" className="text-center">
           A draft for the doctor to review and sign off — never a diagnosis.
         </T>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: color.accent },
-  hero: {
-    backgroundColor: color.accent,
-    paddingHorizontal: space.xl,
-    paddingTop: space.xl,
-    // Room for the sheet's rounded top to overlap without covering the CTA.
-    paddingBottom: space.xxl + space.l,
-  },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: space.m },
-  brandMark: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.button,
-    backgroundColor: color.heroChip,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandName: { color: color.onAccentSoft, letterSpacing: 1.4 },
-  heroBody: { flex: 1, justifyContent: 'flex-end', gap: space.xl },
-  headline: { color: color.onAccentSoft, fontSize: 30, lineHeight: 39 },
-  headlineAccent: { color: color.onAccent },
-  cta: { alignSelf: 'flex-start', paddingHorizontal: space.xxl },
-  sheet: {
-    flex: 1,
-    backgroundColor: color.bg,
-    borderTopLeftRadius: radius.card + space.s,
-    borderTopRightRadius: radius.card + space.s,
-    marginTop: -(radius.card + space.s),
-    paddingHorizontal: space.xl,
-    paddingBottom: space.xl,
-    gap: space.m,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: radius.chip,
-    backgroundColor: color.borderStrong,
-    marginTop: space.m,
-    marginBottom: space.s,
-  },
-  feature: { flexDirection: 'row', alignItems: 'center', gap: space.l },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.chip,
-    backgroundColor: color.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTitle: { fontWeight: '600' },
-  footnote: { textAlign: 'center' },
-});

@@ -1,9 +1,115 @@
-:root {
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
-  --font-serif: Georgia, 'Times New Roman', serif;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+/*
+ * "Clinical calm" design tokens — ported 1:1 from the old src/theme/index.ts
+ * (pre-Tailwind). Values are unchanged; only the mechanism moved. Light theme
+ * only — no dark mode toggle, per CLAUDE.md.
+ */
+@layer theme {
+  @theme {
+    /* Surfaces */
+    --color-bg: #FAF9F6;
+    --color-card: #FFFFFF;
+    --color-glass-card: rgba(255, 255, 255, 0.85);
+    --color-glass-header: rgba(250, 249, 246, 0.72);
+
+    /* Ink */
+    --color-ink: #1A1D1F;
+    --color-ink-secondary: #5E6470;
+    --color-ink-faint: #9AA0AA;
+
+    /* Accent — the only one */
+    --color-accent: #0F6E6B;
+    --color-accent-soft: #EAF4F3;
+
+    /* Tier colors — thin left borders + label chips only, never full fills */
+    --color-tier-most-likely: #0F6E6B;
+    --color-tier-expanded: #8A6D1D;
+    --color-tier-cant-miss: #8C3A32;
+    --color-tier-most-likely-soft: #EAF4F3;
+    --color-tier-expanded-soft: #F7F1E1;
+    --color-tier-cant-miss-soft: #FBEDEB;
+
+    /* Semantic */
+    --color-red-flag-bg: #FBEDEB;
+    --color-red-flag-text: #8C3A32;
+    --color-recording: #8C3A32;
+
+    /* Modal backdrop scrim (behind the evidence sheet's blur) */
+    --color-scrim: rgba(26, 29, 31, 0.35);
+
+    /* DEMO ribbon */
+    --color-ribbon-bg: #FDF6E9;
+    --color-ribbon-text: #B7791F;
+
+    /* Hairlines / borders */
+    --color-border: #ECEAE3;
+    --color-border-strong: #DDDAD1;
+
+    /* On-accent text */
+    --color-on-accent: #FFFFFF;
+    /* Hero (landing) — supporting tints over the deep-teal accent surface */
+    --color-on-accent-soft: rgba(255, 255, 255, 0.78);
+    --color-hero-chip: rgba(255, 255, 255, 0.12);
+    --color-hero-line: rgba(255, 255, 255, 0.10);
+
+    /* Disabled */
+    --color-disabled-bg: #E4E2DC;
+
+    /*
+     * Spacing scale 4/8/12/16/24/32 — this is already Tailwind's default
+     * spacing scale at multiples of 4 (p-1=4, p-2=8, p-3=12, p-4=16, p-6=24,
+     * p-8=32), so no custom spacing tokens are needed. Use those numbers
+     * directly (gap-3, p-4, etc.) rather than inventing new ones.
+     */
+
+    /*
+     * Radius: card=16 → rounded-2xl, button=12 → rounded-xl, chip=999 →
+     * rounded-full. These already match Tailwind's default radius scale.
+     * Semantic aliases below keep intent readable in component code.
+     */
+    --radius-card: 1rem;      /* 16px, same as rounded-2xl */
+    --radius-button: 0.75rem; /* 12px, same as rounded-xl */
+
+    /* Type scale — sizes carry their own line-height via --text-*--line-height */
+    --text-title: 28px;
+    --text-title--line-height: 39px;
+    --text-body: 17px;
+    --text-body--line-height: 24px;
+    --text-secondary: 15px;
+    --text-secondary--line-height: 21px;
+    --text-caption: 13px;
+    --text-caption--line-height: 18px;
+    --text-overline: 13px;
+    --text-overline--line-height: 18px;
+
+    /* The one sanctioned elevation — no stacked heavy shadows. */
+    --shadow-card: 0px 2px 8px 0px rgb(26 29 31 / 0.06);
+
+    /* Fonts — carried over from the original scaffold stub */
+    --font-display: Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif,
+      Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+    --font-serif: Georgia, 'Times New Roman', serif;
+  }
+}
+
+/* Platform-specific font families */
+@media android {
+  :root {
+    --font-mono: monospace;
+    --font-rounded: normal;
+    --font-serif: serif;
+    --font-sans: normal;
+  }
+}
+
+@media ios {
+  :root {
+    --font-mono: ui-monospace;
+    --font-serif: ui-serif;
+    --font-sans: system-ui;
+    --font-rounded: ui-rounded;
+  }
 }
