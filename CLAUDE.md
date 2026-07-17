@@ -70,11 +70,26 @@ hospital-sterile. **No dark theme, no dark mode toggle — light only.**
 
 **Scoped exception: the auth flow (`sign-in.tsx`, `sign-up.tsx`) is dark.**
 Explicit, deliberate call (not a drift) — matched to a reference screenshot,
-tokens in `global.css` under `night-*`, components in
-`src/components/night-ui.tsx`, fully separate from the light `ui.tsx` kit.
-Every clinical screen (Landing onward, once past auth) stays light-only per
-the rule above — this is not a precedent for dark-mode-ing the rest of the
-app. Flag any drift outside `sign-in.tsx`/`sign-up.tsx` as a bug.
+tokens in `global.css` under `night-*`. Every clinical screen (Landing
+onward, once past auth) stays light-only per the rule above — this is not a
+precedent for dark-mode-ing the rest of the app. Flag any drift outside
+`sign-in.tsx`/`sign-up.tsx` as a bug.
+
+**Auth-flow form controls are ported from react-native-reusables** (shadcn
+for RN), not hand-rolled: `src/components/ui/{button,input,label,text,
+form-field}.tsx`, sourced from `founded-labs/react-native-reusables` and
+adapted — their raw `react-native` imports swapped for this project's `@/tw`
+CSS-wrapped primitives (upstream assumes classic NativeWind's babel
+transform, which this project's react-native-css setup doesn't use), and
+their generic shadcn tokens (`bg-primary`, `text-foreground`, `border-input`,
+...) swapped for this project's `night-*` tokens (global-namespace collision
+with the light theme's own `card`/`accent`/`border` tokens otherwise — same
+`@theme` block, flat namespace, last definition wins app-wide). Do NOT use
+`@rn-primitives/label` — confirmed its `Root`/`Text` render raw RN components
+internally, bypassing the CSS wrapper entirely; `label.tsx` here is a
+from-scratch equivalent built on `@/tw`, not a port. `src/components/
+night-ui.tsx` keeps only what has no RNR equivalent (gradient/starfield
+background, logo mark).
 
 Glass accents (expo-blur), restricted to exactly three surfaces:
 1. Consult sticky header — translucent + blur, chat scrolls beneath it

@@ -122,6 +122,9 @@
        main CTA button stays night-accent (white) — unchanged. */
     --color-night-accent-2: #8B85FF;
     --color-night-glow: rgba(139, 133, 255, 0.35);
+    /* Surfaces RNR's Button/Input "hover-ish" (active/press) states need,
+       one step up from night-surface. Distinct name, no collision. */
+    --color-night-surface-hover: rgba(255, 255, 255, 0.18);
   }
 }
 

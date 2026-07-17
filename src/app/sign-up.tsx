@@ -1,10 +1,15 @@
-// Sign up — dark "night" theme, mirrors sign-in.tsx. See src/components/night-ui.tsx.
+// Sign up — dark "night" theme, mirrors sign-in.tsx. Form controls ported
+// from react-native-reusables — see src/components/ui/*.tsx headers.
 
 import { Link, useRouter } from 'expo-router';
 import { ChevronLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 
-import { NightButton, NightErrorBanner, NightField, NightIconButton, NightLogo, NightScroll, NightSky, NightText } from '@/components/night-ui';
+import { NightLogo, NightScroll, NightSky } from '@/components/night-ui';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/ui/form-field';
+import { Text } from '@/components/ui/text';
 import { authClient } from '@/lib/auth-client';
 import { Pressable, View } from '@/tw';
 
@@ -40,28 +45,31 @@ export default function SignUpScreen() {
     <NightSky>
       <NightScroll>
         <View className="flex-row items-center justify-between pt-4">
-          <NightIconButton icon={ChevronLeft} label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full"
+            accessibilityLabel="Back"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+            <ChevronLeft size={18} color="#F5F5F8" strokeWidth={2.2} />
+          </Button>
         </View>
 
         <View className="gap-8 flex-1 justify-center">
           <View className="gap-4 items-center">
             <NightLogo />
             <View className="items-center">
-              <NightText variant="title" className="text-center">
-                Create your
-              </NightText>
-              <NightText variant="title" className="text-center" style={{ color: '#8B85FF' }}>
-                account
-              </NightText>
+              <Text className="text-[28px] leading-[36px] font-semibold text-center">Create your</Text>
+              <Text className="text-[28px] leading-[36px] font-semibold text-center text-night-accent-2">account</Text>
             </View>
-            <NightText muted className="text-center">
+            <Text variant="muted" className="text-center">
               Synthetic demo data only — do not use real patient information.
-            </NightText>
+            </Text>
           </View>
 
           <View className="gap-4">
-            <NightField label="Name" icon={User} value={name} onChangeText={setName} placeholder="Dr. Rahul Sharma" textContentType="name" />
-            <NightField
+            <FormField label="Name" icon={User} value={name} onChangeText={setName} placeholder="Dr. Rahul Sharma" textContentType="name" />
+            <FormField
               label="Email"
               icon={Mail}
               value={email}
@@ -72,7 +80,7 @@ export default function SignUpScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
             />
-            <NightField
+            <FormField
               label="Password"
               icon={Lock}
               value={password}
@@ -90,19 +98,25 @@ export default function SignUpScreen() {
                 </Pressable>
               }
             />
-            {error && <NightErrorBanner message={error} />}
-            <NightButton label="Create account" onPress={submit} disabled={!canSubmit} loading={loading} />
+            {error && (
+              <View className="rounded-2xl border border-night-border px-4 py-3" style={{ backgroundColor: 'rgba(255,107,107,0.12)' }}>
+                <Text className="text-sm" style={{ color: '#FF6B6B' }}>
+                  {error}
+                </Text>
+              </View>
+            )}
+            <Button onPress={submit} disabled={!canSubmit || loading}>
+              {loading ? <ActivityIndicator color="#131129" /> : <Text>Create account</Text>}
+            </Button>
           </View>
         </View>
 
         <View className="flex-row items-center justify-center gap-2 pb-2">
-          <NightText muted variant="body" className="text-sm">
+          <Text variant="muted" className="text-sm">
             Already have an account?
-          </NightText>
+          </Text>
           <Link href="/sign-in">
-            <NightText variant="body" className="text-sm font-semibold" style={{ color: '#8B85FF' }}>
-              Sign in
-            </NightText>
+            <Text className="text-sm font-semibold text-night-accent-2">Sign in</Text>
           </Link>
         </View>
       </NightScroll>
