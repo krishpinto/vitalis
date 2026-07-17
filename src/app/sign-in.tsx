@@ -3,10 +3,10 @@
 // the app yet, just a working screen against the real better-auth backend.
 
 import { Link, useRouter } from 'expo-router';
-import { ChevronLeft, Eye, EyeOff, Lock, Mail, Stethoscope } from 'lucide-react-native';
+import { ChevronLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 
-import { NightButton, NightErrorBanner, NightField, NightIconButton, NightScroll, NightSky, NightText } from '@/components/night-ui';
+import { NightButton, NightErrorBanner, NightField, NightIconButton, NightLogo, NightScroll, NightSky, NightText } from '@/components/night-ui';
 import { authClient } from '@/lib/auth-client';
 import { Pressable, View } from '@/tw';
 
@@ -44,17 +44,19 @@ export default function SignInScreen() {
         </View>
 
         <View className="gap-8 flex-1 justify-center">
-          <View className="gap-3">
-            <View className="flex-row items-center gap-3">
-              <View className="w-9 h-9 rounded-xl items-center justify-center bg-night-surface border border-night-border">
-                <Stethoscope size={16} color="#F5F5F8" strokeWidth={2} />
-              </View>
-              <NightText variant="label" className="tracking-[1.4px]">
-                SECOND OPINION
+          <View className="gap-4 items-center">
+            <NightLogo />
+            <View className="items-center">
+              <NightText variant="title" className="text-center">
+                Welcome back
+              </NightText>
+              <NightText variant="title" className="text-center" style={{ color: '#8B85FF' }}>
+                Doctor
               </NightText>
             </View>
-            <NightText variant="title">Welcome back</NightText>
-            <NightText muted>Sign in to continue to your consults.</NightText>
+            <NightText muted className="text-center">
+              Sign in to continue to your consults.
+            </NightText>
           </View>
 
           <View className="gap-4">
@@ -87,6 +89,10 @@ export default function SignInScreen() {
                 </Pressable>
               }
             />
+            {/* Visual only for now — no password-reset flow (email sending) is wired up yet. */}
+            <NightText variant="body" className="text-sm font-semibold -mt-2" style={{ color: '#8B85FF' }}>
+              Forgot password?
+            </NightText>
             {error && <NightErrorBanner message={error} />}
             <NightButton label="Sign in" onPress={submit} disabled={!canSubmit} loading={loading} />
           </View>
@@ -97,8 +103,8 @@ export default function SignInScreen() {
             Don&apos;t have an account?
           </NightText>
           <Link href="/sign-up">
-            <NightText variant="body" className="text-sm font-semibold">
-              Create one
+            <NightText variant="body" className="text-sm font-semibold" style={{ color: '#8B85FF' }}>
+              Sign up
             </NightText>
           </Link>
         </View>

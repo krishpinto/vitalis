@@ -116,6 +116,12 @@
     --color-night-accent: #FFFFFF;
     --color-night-accent-ink: #131129;
     --color-night-danger: #FF6B6B;
+    /* Secondary accent — a lighter tint of the same indigo/violet the
+       gradient is built from (not a new hue family), for text highlights
+       and links (two-tone headings, "Forgot password?", "Sign up"). The
+       main CTA button stays night-accent (white) — unchanged. */
+    --color-night-accent-2: #8B85FF;
+    --color-night-glow: rgba(139, 133, 255, 0.35);
   }
 }
 

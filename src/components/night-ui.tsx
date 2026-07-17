@@ -3,7 +3,7 @@
 // of the app to the light "clinical calm" theme, so these components must
 // never be reachable from a clinical screen. See global.css's night-* tokens.
 
-import type { LucideIcon } from 'lucide-react-native';
+import { Activity, Plus, type LucideIcon } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
@@ -58,6 +58,27 @@ export function NightSky({ children }: { children: React.ReactNode }) {
         ))}
       </Svg>
       {children}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NightLogo — glowing badge mark: cross + heartbeat pulse, centered use.
+// Colors stay within the existing night palette (white + the night-accent-2
+// violet) — no new hue introduced, just a composed mark.
+// ---------------------------------------------------------------------------
+
+export function NightLogo({ size = 88 }: { size?: number }) {
+  return (
+    <View
+      className="items-center justify-center rounded-[28px] bg-night-surface-strong border border-night-border self-center"
+      style={{
+        width: size,
+        height: size,
+        boxShadow: `0 0 ${Math.round(size * 0.65)}px ${Math.round(size * 0.1)}px rgba(139,133,255,0.35)`,
+      }}>
+      <Plus size={size * 0.5} color="#F5F5F8" strokeWidth={2.6} />
+      <Activity size={size * 0.56} color="#8B85FF" strokeWidth={2} style={{ position: 'absolute' }} />
     </View>
   );
 }

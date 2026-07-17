@@ -1,10 +1,10 @@
 // Sign up — dark "night" theme, mirrors sign-in.tsx. See src/components/night-ui.tsx.
 
 import { Link, useRouter } from 'expo-router';
-import { ChevronLeft, Eye, EyeOff, Lock, Mail, Stethoscope, User } from 'lucide-react-native';
+import { ChevronLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 
-import { NightButton, NightErrorBanner, NightField, NightIconButton, NightScroll, NightSky, NightText } from '@/components/night-ui';
+import { NightButton, NightErrorBanner, NightField, NightIconButton, NightLogo, NightScroll, NightSky, NightText } from '@/components/night-ui';
 import { authClient } from '@/lib/auth-client';
 import { Pressable, View } from '@/tw';
 
@@ -44,17 +44,19 @@ export default function SignUpScreen() {
         </View>
 
         <View className="gap-8 flex-1 justify-center">
-          <View className="gap-3">
-            <View className="flex-row items-center gap-3">
-              <View className="w-9 h-9 rounded-xl items-center justify-center bg-night-surface border border-night-border">
-                <Stethoscope size={16} color="#F5F5F8" strokeWidth={2} />
-              </View>
-              <NightText variant="label" className="tracking-[1.4px]">
-                SECOND OPINION
+          <View className="gap-4 items-center">
+            <NightLogo />
+            <View className="items-center">
+              <NightText variant="title" className="text-center">
+                Create your
+              </NightText>
+              <NightText variant="title" className="text-center" style={{ color: '#8B85FF' }}>
+                account
               </NightText>
             </View>
-            <NightText variant="title">Create your account</NightText>
-            <NightText muted>Synthetic demo data only — do not use real patient information.</NightText>
+            <NightText muted className="text-center">
+              Synthetic demo data only — do not use real patient information.
+            </NightText>
           </View>
 
           <View className="gap-4">
@@ -98,7 +100,7 @@ export default function SignUpScreen() {
             Already have an account?
           </NightText>
           <Link href="/sign-in">
-            <NightText variant="body" className="text-sm font-semibold">
+            <NightText variant="body" className="text-sm font-semibold" style={{ color: '#8B85FF' }}>
               Sign in
             </NightText>
           </Link>
