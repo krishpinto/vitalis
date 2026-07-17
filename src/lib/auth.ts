@@ -14,8 +14,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  // The Expo client sends its own scheme as the request origin on native.
-  trustedOrigins: ['secondopinion://'],
+  // The web client is always served by this same server (localhost, a LAN
+  // IP for phone testing, a tunnel, or the prod domain), so "trusted" here
+  // just means "matches the host that received the request" — computed per
+  // request instead of a fixed list, so it isn't tied to one hostname/port.
+  // The Expo client additionally sends its own scheme as the origin on native.
+  trustedOrigins: async (request?: Request) => {
+    if (!request) return ['secondopinion://'];
+    const url = new URL(request.url);
+    return [`${url.protocol}//${url.host}`, 'secondopinion://'];
+  },
   plugins: [expo()],
 });
 
