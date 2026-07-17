@@ -3,7 +3,7 @@
 // three feature cards. Structure inspired by consumer-health heroes, executed
 // in clinical-calm tokens: one accent, no photos, lucide only.
 
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { AudioLines, FileSearch, Quote, Stethoscope } from 'lucide-react-native';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -82,12 +82,19 @@ export default function LandingScreen() {
             </T>
           </Rise>
           <Rise index={2}>
-            <PrimaryButton
-              label="Get started"
-              onPress={() => router.push('/home')}
-              variant="inverse"
-              className="self-start px-8"
-            />
+            <View className="gap-3 self-start">
+              <PrimaryButton
+                label="Get started"
+                onPress={() => router.push('/home')}
+                variant="inverse"
+                className="self-start px-8"
+              />
+              <Link href="/sign-in">
+                <T variant="secondary" className="font-semibold" style={{ color: 'rgba(255,255,255,0.78)' }}>
+                  Already have an account? <T variant="secondary" className="font-semibold text-on-accent">Sign in</T>
+                </T>
+              </Link>
+            </View>
           </Rise>
         </View>
       </View>

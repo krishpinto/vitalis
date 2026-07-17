@@ -38,8 +38,9 @@ second-assistant tone.
 | Gap detection, alignment, suggestion cards, feedback (items 3–6) | ✅ |
 | Photo input to Gemini Call #2 (item 7) | ✅ Wired |
 | Vendor-call timeouts (structuring 30s / DD 60s / suggestions 15s / chunk STT 20s) → retryable error cards, never infinite spinners | ✅ |
-| Backend / API layer (item 8) | ❌ None — client calls vendors directly |
-| Persistence (item 8) | ❌ In-memory only |
+| Backend / API layer (item 8) | ⚙️ Started — Expo Router API routes (`web.output: "server"`), not a separate server |
+| Auth: better-auth (email/password) against Neon, via `app/api/auth/[...all]+api.ts` | ✅ Real — sign-up/sign-in verified end-to-end |
+| Persistence (item 8) | ⚙️ Neon Postgres provisioned + auth tables live; clinical data (patients/consults/etc.) still in-memory only |
 | Consent capture + retention policy (item 9) | ❌ Not built |
 | Guidelines content | ⚠️ 8 placeholder excerpts, unverified |
 | Supabase storage upload, TTS (Bulbul) | ⚙️ Coded, not wired |
@@ -66,6 +67,14 @@ No default React Native look. No dashboard-template look.
 ### Direction: "clinical calm" — LIGHT theme only
 Precision-instrument feel. Quiet, warm, trustworthy. Not startup-neon, not
 hospital-sterile. **No dark theme, no dark mode toggle — light only.**
+
+**Scoped exception: the auth flow (`sign-in.tsx`, `sign-up.tsx`) is dark.**
+Explicit, deliberate call (not a drift) — matched to a reference screenshot,
+tokens in `global.css` under `night-*`, components in
+`src/components/night-ui.tsx`, fully separate from the light `ui.tsx` kit.
+Every clinical screen (Landing onward, once past auth) stays light-only per
+the rule above — this is not a precedent for dark-mode-ing the rest of the
+app. Flag any drift outside `sign-in.tsx`/`sign-up.tsx` as a bug.
 
 Glass accents (expo-blur), restricted to exactly three surfaces:
 1. Consult sticky header — translucent + blur, chat scrolls beneath it

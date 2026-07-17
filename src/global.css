@@ -92,6 +92,30 @@
     --font-display: Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif,
       Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
     --font-serif: Georgia, 'Times New Roman', serif;
+
+    /*
+     * "Night" theme — a second, deliberately separate palette for the auth
+     * flow (sign-in/sign-up), matched to a reference screenshot (deep indigo
+     * → near-black starfield gradient, translucent glass surfaces, white
+     * accent). NOT a dark-mode toggle for the clinical app — CLAUDE.md's
+     * "light only, no dark mode" rule still governs every existing clinical
+     * screen. This is an additive, separately-named token set (night-*) so
+     * the two palettes can never collide or accidentally leak into each
+     * other. Flagged for Krish: this is a deliberate, explicit exception to
+     * the locked design system, scoped to auth only until decided otherwise.
+     */
+    --color-night-sky-top: #241F54;
+    --color-night-sky-mid: #131129;
+    --color-night-sky-bottom: #07070C;
+    --color-night-surface: rgba(255, 255, 255, 0.08);
+    --color-night-surface-strong: rgba(255, 255, 255, 0.14);
+    --color-night-border: rgba(255, 255, 255, 0.14);
+    --color-night-text: #F5F5F8;
+    --color-night-text-muted: #9C9BBE;
+    --color-night-text-faint: #6E6D8C;
+    --color-night-accent: #FFFFFF;
+    --color-night-accent-ink: #131129;
+    --color-night-danger: #FF6B6B;
   }
 }
 
