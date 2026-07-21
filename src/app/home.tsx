@@ -1,14 +1,16 @@
-// Home — the doctor's daily entry point: greeting, two action tiles (start a
-// consult / new patient), and recent consults derived from the patient store.
-// Dashboard structure inspired by consumer-health apps, executed in
-// clinical-calm tokens: no photos, no fake notifications, lucide only.
+// Home — the doctor's daily entry point, re-cut in the dark "MobileCode"
+// aesthetic (reference: greeting + large light headline + a composer pinned at
+// the bottom with a "+" and a send button). Functionality is unchanged: the
+// composer starts a consult (routes into patient pick), "+" adds a patient, and
+// recent consults come from the patient store. Built on src/components/mc.tsx.
 
 import { useRouter } from 'expo-router';
-import { ChevronRight, Mic, Quote, Stethoscope, UserRoundPlus } from 'lucide-react-native';
+import { ChevronRight, Stethoscope, UserRound, UserRoundPlus } from 'lucide-react-native';
+import { useState } from 'react';
 
-import { Card, Chip, Rise, SectionHeader, T } from '@/components/ui';
+import { MC, MCBackground, MCComposer, MCText } from '@/components/mc';
 import { useConsult } from '@/lib/store';
-import { ScrollView, View } from '@/tw';
+import { Pressable, ScrollView, View } from '@/tw';
 import type { Patient } from '@/types/clinical';
 
 function greeting() {
@@ -16,14 +18,6 @@ function greeting() {
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
-}
-
-function today() {
-  return new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
 }
 
 function initials(name: string) {
@@ -40,6 +34,7 @@ export default function HomeScreen() {
   const patients = useConsult((s) => s.patients);
   const selectPatient = useConsult((s) => s.selectPatient);
   const reset = useConsult((s) => s.reset);
+  const [query, setQuery] = useState('');
 
   const recent = patients.slice(0, 3);
 
@@ -50,96 +45,71 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-bg" contentContainerClassName="p-6 gap-4 pb-8">
-      {/* Greeting header */}
-      <Rise index={0}>
-        <View className="flex-row items-center gap-4">
-          <View className="flex-1">
-            <T variant="title" className="text-2xl leading-8">
-              {greeting()}, Doctor
-            </T>
-            <T variant="secondary" tone="secondary">
-              {today()}
-            </T>
+    <MCBackground>
+      <View className="flex-1">
+        {/* Top bar */}
+        <View className="flex-row items-center justify-between px-6 pt-4">
+          <View className="h-9 w-9 items-center justify-center rounded-xl border border-night-border bg-night-surface">
+            <Stethoscope size={18} color={MC.ink} strokeWidth={2} />
           </View>
-          <View className="w-11 h-11 rounded-full bg-accent-soft items-center justify-center">
-            <Stethoscope size={20} color="#0F6E6B" strokeWidth={2} />
-          </View>
+          <MCText variant="eyebrow">Second Opinion</MCText>
+          <View className="h-9 w-9" />
         </View>
-      </Rise>
 
-      {/* Action tiles — start consult is the dominant action */}
-      <View className="flex-row gap-3">
-        <Rise index={1} style={{ flex: 1 }}>
-          <Card onPress={() => router.push('/patients')} className="gap-2 min-h-[140px] bg-accent">
-            <View className="w-10 h-10 rounded-full bg-hero-chip items-center justify-center mb-1">
-              <Mic size={20} color="#FFFFFF" strokeWidth={2} />
+        {/* Greeting + headline + recent consults (scrolls) */}
+        <ScrollView className="flex-1" contentContainerClassName="px-6 pt-10 pb-4" keyboardShouldPersistTaps="handled">
+          <View className="items-center gap-2">
+            <MCText variant="greeting">{greeting()}, Doctor 👋</MCText>
+            <MCText variant="headline" className="text-center">
+              Who are we seeing today?
+            </MCText>
+          </View>
+
+          {recent.length > 0 && (
+            <View className="gap-3 pt-12">
+              <MCText variant="eyebrow" className="ml-1">
+                Recent consults
+              </MCText>
+              {recent.map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => openConsult(p)}
+                  className="flex-row items-center gap-3 rounded-3xl border border-night-border bg-night-surface p-4">
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-night-surface-strong">
+                    <MCText variant="muted" className="font-semibold text-night-text">
+                      {initials(p.name)}
+                    </MCText>
+                  </View>
+                  <View className="flex-1">
+                    <MCText variant="body" className="font-semibold">
+                      {p.name}
+                    </MCText>
+                    <MCText variant="muted" numberOfLines={1}>
+                      {p.complaint ?? 'No chief complaint recorded'}
+                    </MCText>
+                  </View>
+                  <ChevronRight size={16} color={MC.faint} strokeWidth={2} />
+                </Pressable>
+              ))}
             </View>
-            <T variant="secondary" className="font-semibold text-[17px] leading-[23px] text-on-accent">
-              Start a{'\n'}consult
-            </T>
-            <T variant="caption" style={{ color: 'rgba(255,255,255,0.78)' }}>
-              Record & get a cited draft
-            </T>
-          </Card>
-        </Rise>
-        <Rise index={2} style={{ flex: 1 }}>
-          <Card onPress={() => router.push('/new-patient')} className="gap-2 min-h-[140px]">
-            <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center mb-1">
-              <UserRoundPlus size={20} color="#0F6E6B" strokeWidth={2} />
-            </View>
-            <T variant="secondary" className="font-semibold text-[17px] leading-[23px]">
-              New{'\n'}patient
-            </T>
-            <T variant="caption" tone="secondary">
-              Add a record, then consult
-            </T>
-          </Card>
-        </Rise>
+          )}
+        </ScrollView>
+
+        {/* Composer — pinned at the bottom, the signature block from the ref */}
+        <View className="px-6 pb-6 pt-1">
+          <MCComposer
+            value={query}
+            onChangeText={setQuery}
+            onSubmit={() => router.push('/patients')}
+            onPlus={() => router.push('/new-patient')}
+            placeholder="Search a patient, or start a new consult…"
+            pills={[
+              { label: 'Patients', icon: UserRound, onPress: () => router.push('/patients') },
+              { label: 'New patient', icon: UserRoundPlus, onPress: () => router.push('/new-patient') },
+            ]}
+          />
+        </View>
       </View>
-
-      {/* Recent consults — from the patient store */}
-      <SectionHeader
-        title="Recent consults"
-        trailing={
-          <T variant="caption" tone="accent" className="font-semibold" onPress={() => router.push('/patients')}>
-            See all
-          </T>
-        }
-      />
-      {recent.map((p, i) => (
-        <Rise key={p.id} index={3 + i}>
-          <Card onPress={() => openConsult(p)} className="flex-row items-center gap-3">
-            <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center">
-              <T variant="caption" className="font-semibold text-accent">
-                {initials(p.name)}
-              </T>
-            </View>
-            <View className="flex-1">
-              <T variant="secondary" className="font-semibold">
-                {p.name}
-              </T>
-              <T variant="caption" tone="secondary" numberOfLines={1}>
-                {p.complaint ?? 'No chief complaint recorded'}
-              </T>
-            </View>
-            <View className="flex-row items-center gap-2">
-              {p.lastVisit && <Chip label={p.lastVisit} tint="#5E6470" soft="#FAF9F6" />}
-              <ChevronRight size={16} color="#9AA0AA" strokeWidth={2} />
-            </View>
-          </Card>
-        </Rise>
-      ))}
-
-      {/* Quiet value-prop reminder */}
-      <Rise index={6}>
-        <View className="flex-row items-center gap-3 bg-accent-soft rounded-card p-4">
-          <Quote size={16} color="#0F6E6B" strokeWidth={2.2} />
-          <T variant="caption" tone="secondary" className="flex-1">
-            Every suggestion in a draft is cited — tap it to hear the patient say it.
-          </T>
-        </View>
-      </Rise>
-    </ScrollView>
+    </MCBackground>
   );
 }
