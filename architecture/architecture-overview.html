@@ -1,0 +1,214 @@
+<title>Vitalis — Architecture Overview</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #111214;
+    color: #eaeaea;
+    font-family: "Ink Free", "Segoe Print", "Comic Sans MS", cursive;
+  }
+  .top {
+    padding: 20px 28px 10px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px;
+  }
+  .top h1 {
+    margin: 0; font-size: 1.15rem; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .top span { color: #9aa0a6; font-size: 0.85rem; }
+  .scroller { overflow: auto; padding: 0 12px 28px; }
+  .canvas { position: relative; width: 1560px; height: 1260px; }
+  svg.wires { position: absolute; inset: 0; width: 1560px; height: 1260px; pointer-events: none; }
+  svg.wires path, svg.wires line {
+    fill: none; stroke: #cfcfcf; stroke-width: 1.6;
+  }
+  svg.wires .dash { stroke-dasharray: 7 6; stroke: #9aa0a6; }
+  svg.wires .loop { stroke: #7fe3ec; stroke-width: 2; }
+
+  .node {
+    position: absolute;
+    border: 1.7px solid #e6e6e6;
+    border-radius: 11px;
+    background: #111214;
+    padding: 9px 11px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .node .t { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 3px; }
+  .node .b { color: #eaeaea; font-weight: 700; font-size: 11px; display: block; margin-bottom: 3px; }
+  .node .d { color: #c4c8cc; font-size: 11.5px; display: block; }
+  .node.dashed { border-style: dashed; border-color: #9aa0a6; }
+  .node.dashed .t { color: #d7dadd; }
+  .node.hot { border-color: #35c9d6; }
+  .node.hot .t { color: #7fe3ec; }
+  .node.ai { border-left: 5px solid #e8b04b; }
+  .node.det { border-left: 5px solid #6ea8d8; }
+
+  .tag {
+    display: inline-block; font-size: 9px; letter-spacing: 0.05em; font-weight: 700;
+    padding: 1px 7px; border-radius: 20px; margin-bottom: 5px;
+  }
+  .tag.ai { background: rgba(232,176,75,0.14); color: #e8b04b; border: 1px solid #e8b04b; }
+  .tag.det { background: rgba(110,168,216,0.14); color: #8fc1ef; border: 1px solid #6ea8d8; }
+
+  .lbl {
+    position: absolute;
+    color: #b9bec3;
+    font-size: 11px;
+    white-space: nowrap;
+    background: #111214;
+    padding: 0 4px;
+  }
+  .lbl.loop { color: #7fe3ec; font-size: 11.5px; font-weight: 700; white-space: normal; width: 700px; }
+
+  .pg-title { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 8px; text-align: left; }
+  .pg-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-start; margin-bottom: 8px; }
+  .pg-chips span {
+    border: 1.4px solid #8f959b; border-radius: 7px; padding: 3px 9px;
+    font-size: 11px; color: #dfe2e5;
+  }
+  .pg-note { color: #9fd9c8; font-size: 11.5px; text-align: left; display: block; }
+
+  .legend-row { display: flex; align-items: center; gap: 9px; margin: 8px 0; }
+  .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+  .legend p { color: #c4c8cc; font-size: 11px; line-height: 1.5; text-align: left; margin: 10px 0 0; }
+  .legend p b { color: #eaeaea; }
+</style>
+
+<div class="top">
+  <h1>VITALIS — ARCHITECTURE OVERVIEW</h1>
+  <span>a lighter pass on architecture-pitch.html · same story, roughly a third fewer boxes and shorter labels · full detail: architecture-map.html · scroll →</span>
+</div>
+
+<div class="scroller">
+  <div class="canvas" role="img" aria-label="Vitalis architecture overview: capture and streaming, AI speech-to-text and diarization, deterministic role resolution and template selection, AI entity extraction that is extraction only, a deterministic scoring and red-flag layer, an AI RAG citation layer, the doctor UI, EMR export, and policy notes, with the doctor's feedback loop highlighted">
+
+    <svg class="wires" aria-hidden="true">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#cfcfcf" stroke-width="1.6"/>
+        </marker>
+        <marker id="arrd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#9aa0a6" stroke-width="1.6"/>
+        </marker>
+        <marker id="arrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#7fe3ec" stroke-width="2"/>
+        </marker>
+      </defs>
+
+      <path d="M190,115 L250,120" marker-end="url(#arr)"/>
+      <path d="M480,120 L540,125" marker-end="url(#arr)"/>
+      <path class="dash" d="M655,55 L655,40 L930,40 L930,66" marker-end="url(#arrd)"/>
+      <path d="M655,195 L655,250 L435,250 L435,300" marker-end="url(#arr)"/>
+      <path d="M655,195 L655,260 L710,260 L710,300" marker-end="url(#arr)"/>
+      <path d="M540,330 L880,330" marker-end="url(#arr)"/>
+      <path d="M820,390 L880,390" marker-end="url(#arr)"/>
+      <path d="M1005,450 L1005,490 L725,490 L725,530" marker-end="url(#arr)"/>
+      <path d="M850,615 L900,615" marker-end="url(#arr)"/>
+      <path d="M725,700 L725,740" marker-end="url(#arr)"/>
+      <path d="M1140,615 L1200,615" marker-end="url(#arr)"/>
+      <path d="M850,795 L1200,680" marker-end="url(#arr)"/>
+      <path d="M1320,680 L1320,720" marker-end="url(#arr)"/>
+      <!-- the feedback loop -->
+      <path class="loop" d="M1320,460 L1320,20 L115,20 L115,68" marker-end="url(#arrl)"/>
+    </svg>
+
+    <div class="lbl loop" style="left:230px; top:0px;">the loop: doctor asks another question → transcript changes → extractor updates → prediction changes, ~3–5s cycle, not one-shot</div>
+
+    <!-- ===== capture ===== -->
+    <div class="node" style="left:40px; top:70px; width:150px; min-height:90px;">
+      <span class="t">USER — DOCTOR</span>
+      <span class="d">starts the consult · patient never sees this</span>
+    </div>
+    <div class="node" style="left:250px; top:70px; width:230px; min-height:100px;">
+      <span class="t">CAPTURE &amp; STREAM</span>
+      <span class="d">mic capture · silence trimmed at the edge · 1s frames, buffered against flaky clinic wifi</span>
+    </div>
+    <div class="node ai" style="left:540px; top:55px; width:230px; min-height:140px;">
+      <span class="tag ai">AI · PROBABILISTIC</span>
+      <span class="t">STT + DIARIZATION</span>
+      <span class="d">managed API, ~300ms · diarization built in · Sarvam benchmarked for Hinglish</span>
+    </div>
+    <div class="node dashed" style="left:830px; top:70px; width:200px; min-height:90px;">
+      <span class="t">RAW AUDIO → DELETED</span>
+      <span class="d">post-transcription · smaller breach surface</span>
+    </div>
+
+    <!-- ===== understanding ===== -->
+    <div class="node det" style="left:330px; top:300px; width:210px; min-height:120px;">
+      <span class="tag det">DETERMINISTIC</span>
+      <span class="t">ROLE RESOLVER</span>
+      <span class="d">speaker 0/1 → doctor / patient · voiceprint + heuristics · one-tap override</span>
+    </div>
+    <div class="node det" style="left:600px; top:300px; width:220px; min-height:120px;">
+      <span class="tag det">DETERMINISTIC</span>
+      <span class="t">COMPLAINT TEMPLATE</span>
+      <span class="d">picks / switches the adaptive proforma schema from the chief complaint</span>
+    </div>
+    <div class="node ai" style="left:880px; top:280px; width:250px; min-height:170px;">
+      <span class="tag ai">AI · PROBABILISTIC</span>
+      <span class="t">EXTRACTOR — LLM</span>
+      <span class="b">EXTRACTION ONLY — NO CLINICAL REASONING</span>
+      <span class="d">constrained JSON schema · 3–5s sliding window → proforma fields (span + timestamp provenance)</span>
+    </div>
+
+    <!-- ===== reasoning ===== -->
+    <div class="node hot det" style="left:600px; top:530px; width:250px; min-height:170px;">
+      <span class="tag det">DETERMINISTIC</span>
+      <span class="t">SCORING ENGINE</span>
+      <span class="d">rank = feature match × fixed, versioned severity constants — not LLM-generated · &lt;50ms, zero model calls · DXplain lineage since 1987</span>
+    </div>
+    <div class="node det" style="left:600px; top:740px; width:250px; min-height:110px;">
+      <span class="tag det">DETERMINISTIC</span>
+      <span class="t">RED-FLAG SCREEN</span>
+      <span class="d">killers always evaluated · thin evidence flagged, never dropped</span>
+    </div>
+    <div class="node hot ai" style="left:900px; top:530px; width:240px; min-height:170px;">
+      <span class="tag ai">AI · PROBABILISTIC</span>
+      <span class="t">RAG CITATION LAYER</span>
+      <span class="d">pgvector over SNOMED / ICD-10 / WHO-ICMR STGs · every differential carries a citation</span>
+    </div>
+
+    <!-- ===== output ===== -->
+    <div class="node" style="left:1200px; top:460px; width:240px; min-height:220px;">
+      <span class="t">DOCTOR UI</span>
+      <span class="d">ranked DDx + gap prompts · ≤6s utterance → screen · doctor-only, nothing auto-inserted · final call stays with the doctor</span>
+    </div>
+    <div class="node" style="left:1200px; top:720px; width:240px; min-height:130px;">
+      <span class="t">EMR EXPORT</span>
+      <span class="d">async structured note → FHIR bundle → OpenMRS / Bahmni · we're a layer, not the EMR</span>
+    </div>
+
+    <!-- ===== policy / quality ===== -->
+    <div class="node dashed" style="left:40px; top:900px; width:220px; min-height:90px;">
+      <span class="t">DPDP CONSENT</span>
+      <span class="d">captured at consult start · in-country residency · right-to-erasure</span>
+    </div>
+    <div class="node dashed" style="left:300px; top:900px; width:220px; min-height:90px;">
+      <span class="t">EVAL HARNESS</span>
+      <span class="d">sealed ground-truth consults gate every release</span>
+    </div>
+    <div class="node" style="left:560px; top:900px; width:360px; min-height:140px; text-align:left;">
+      <span class="pg-title">POSTGRES — Mumbai · relational + vectors + queue, one engine</span>
+      <div class="pg-chips">
+        <span>consults</span>
+        <span>transcript_segments</span>
+        <span>proforma_fields</span>
+        <span>differentials</span>
+        <span>kb_chunks</span>
+        <span>emr_push_log</span>
+      </div>
+      <span class="pg-note">field-level provenance throughout · consent + residency + right-to-erasure from day one</span>
+    </div>
+
+    <!-- ===== legend / USP ===== -->
+    <div class="node legend" style="left:960px; top:900px; width:280px; min-height:280px; text-align:left;">
+      <span class="pg-title">AI vs DETERMINISTIC</span>
+      <div class="legend-row"><span class="swatch" style="background:#e8b04b;"></span><span class="d">AI · probabilistic — a model's output, can be wrong</span></div>
+      <div class="legend-row"><span class="swatch" style="background:#6ea8d8;"></span><span class="d">Deterministic — fixed logic, auditable</span></div>
+      <div class="legend-row"><span class="swatch" style="background:transparent; box-shadow:0 0 0 2px #35c9d6;"></span><span class="d">Teal ring = defensible IP</span></div>
+      <p>Only STT and the extractor are probabilistic — and the extractor only fills a schema, it never decides anything.</p>
+      <p><b>The AI reads the room, the math decides the ranking.</b></p>
+    </div>
+  </div>
+</div>
