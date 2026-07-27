@@ -1,0 +1,196 @@
+<title>Vitalis — Proto Architecture (Prod Subset)</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #111214;
+    color: #eaeaea;
+    font-family: "Ink Free", "Segoe Print", "Comic Sans MS", cursive;
+  }
+  .top {
+    padding: 20px 28px 10px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px;
+  }
+  .top h1 {
+    margin: 0; font-size: 1.15rem; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .top span { color: #9aa0a6; font-size: 0.85rem; }
+  .scroller { overflow: auto; padding: 0 12px 28px; }
+  .canvas { position: relative; width: 1900px; height: 1180px; }
+  svg.wires { position: absolute; inset: 0; width: 1900px; height: 1180px; pointer-events: none; }
+  svg.wires path, svg.wires line {
+    fill: none; stroke: #cfcfcf; stroke-width: 1.6;
+  }
+  svg.wires .dash { stroke-dasharray: 7 6; stroke: #9aa0a6; }
+
+  .node {
+    position: absolute;
+    border: 1.7px solid #e6e6e6;
+    border-radius: 11px;
+    background: #111214;
+    padding: 9px 11px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .node .t { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 3px; }
+  .node .d { color: #c4c8cc; font-size: 11.5px; display: block; }
+  .node.dashed { border-style: dashed; border-color: #9aa0a6; }
+  .node.dashed .t { color: #d7dadd; }
+  .node.hot { border-color: #35c9d6; }
+  .node.hot .t { color: #7fe3ec; }
+
+  .lbl {
+    position: absolute;
+    color: #b9bec3;
+    font-size: 11px;
+    white-space: nowrap;
+    background: #111214;
+    padding: 0 4px;
+  }
+
+  .pg-title { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 8px; text-align: left; }
+  .pg-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-start; margin-bottom: 8px; }
+  .pg-chips span {
+    border: 1.4px solid #8f959b; border-radius: 7px; padding: 3px 9px;
+    font-size: 11px; color: #dfe2e5;
+  }
+  .pg-note { color: #9fd9c8; font-size: 11.5px; text-align: left; display: block; }
+</style>
+
+<div class="top">
+  <h1>VITALIS — PROTO ARCHITECTURE (PROD SUBSET) v0.1</h1>
+  <span>the scoped-down pipeline being costed for the funding pitch · companion to prod-architecture.md · teal border = defensible IP · scroll →</span>
+</div>
+
+<div class="scroller">
+  <div class="canvas" role="img" aria-label="Vitalis prod-subset architecture: capture, silence trim, chunked STT, Gemini structuring and live cards, a weights engine and a RAG-grounded Gemini engine running in parallel, a final Gemini arbiter, and the doctor UI loop, with a cost model summary">
+
+    <svg class="wires" aria-hidden="true">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#cfcfcf" stroke-width="1.6"/>
+        </marker>
+        <marker id="arrd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#9aa0a6" stroke-width="1.6"/>
+        </marker>
+      </defs>
+
+      <!-- capture row -->
+      <path d="M190,115 L230,115" marker-end="url(#arr)"/>
+      <path d="M410,115 L450,115" marker-end="url(#arr)"/>
+      <path d="M640,115 L680,115" marker-end="url(#arr)"/>
+      <!-- STT down to structuring/cards -->
+      <path d="M795,175 L825,280" marker-end="url(#arr)"/>
+      <!-- context cost lever note, dashed both ways -->
+      <path class="dash" d="M1030,345 L970,345" marker-end="url(#arrd)"/>
+      <!-- structuring splits down to the two parallel engines -->
+      <path d="M760,430 L675,530" marker-end="url(#arr)"/>
+      <path d="M900,430 L980,530" marker-end="url(#arr)"/>
+      <!-- RAG corpus into gemini engine -->
+      <path d="M1170,575 L1110,575" marker-end="url(#arr)"/>
+      <!-- RAG corpus optionally into weights engine (unconfirmed) -->
+      <path class="dash" d="M1170,540 L1170,460 L675,460 L675,530" marker-end="url(#arrd)"/>
+      <!-- both engines down into arbiter -->
+      <path d="M675,670 L790,740" marker-end="url(#arr)"/>
+      <path d="M980,670 L930,740" marker-end="url(#arr)"/>
+      <!-- arbiter to doctor UI -->
+      <path d="M960,815 L1040,815" marker-end="url(#arr)"/>
+      <!-- doctor UI down to testing-product note -->
+      <path class="dash" d="M1160,890 L1160,910" marker-end="url(#arrd)"/>
+      <!-- doctor UI loops back up to doctor -->
+      <path d="M1160,740 L1160,20 L115,20 L115,68" marker-end="url(#arr)"/>
+    </svg>
+
+    <!-- ===== capture row ===== -->
+    <div class="node" style="left:40px; top:70px; width:150px; min-height:90px;">
+      <span class="t">USER — DOCTOR</span>
+      <span class="d">( starts consult · same phone/laptop capture as today )</span>
+    </div>
+    <div class="node" style="left:230px; top:70px; width:180px; min-height:90px;">
+      <span class="t">APP CAPTURE</span>
+      <span class="d">( mic on-device · audio goes out in bits and pieces, not one blob )</span>
+    </div>
+    <div class="node" style="left:450px; top:70px; width:190px; min-height:90px;">
+      <span class="t">VAD / SILENCE TRIM</span>
+      <span class="d">( drops dead air before it's ever billed as audio minutes )</span>
+    </div>
+    <div class="node" style="left:680px; top:55px; width:230px; min-height:120px;">
+      <span class="t">CHUNKED STT</span>
+      <span class="d">( Sarvam Saaras, current vendor · live chunks + a diarization batch pass on stop · ₹30/hr + ₹45/hr )</span>
+    </div>
+
+    <!-- ===== structuring / cards ===== -->
+    <div class="node hot" style="left:680px; top:280px; width:290px; min-height:150px;">
+      <span class="t">GEMINI — STRUCTURING + LIVE CARDS</span>
+      <span class="d">( proforma + suggestion cards pushed to the doctor's screen · context kept cumulatively — each call resends the transcript-so-far )</span>
+    </div>
+    <div class="node dashed" style="left:1030px; top:300px; width:240px;">
+      <span class="t">OPEN COST LEVER</span>
+      <span class="d">( cumulative context ≈ 1.5× every other stage combined · fix: Gemini context caching, or a sliding window instead of full history )</span>
+    </div>
+
+    <!-- ===== parallel analysis ===== -->
+    <div class="node" style="left:560px; top:530px; width:230px; min-height:140px;">
+      <span class="t">WEIGHTS ENGINE</span>
+      <span class="d">( friend's own model · called via a paid LLM API · vendor + pricing still TBD, modeled at Flash-tier parity for now )</span>
+    </div>
+    <div class="node hot" style="left:850px; top:530px; width:260px; min-height:140px;">
+      <span class="t">GEMINI ENGINE — TIERED DD</span>
+      <span class="d">( same shape as today's Call #2 · grounded against the verified RAG corpus, not just the transcript )</span>
+    </div>
+    <div class="node hot" style="left:1170px; top:510px; width:220px; min-height:130px;">
+      <span class="t">RAG CORPUS</span>
+      <span class="d">( &lt;50 verified guideline / research docs · one-time indexing, effectively free · this is where "accurate" is enforced )</span>
+    </div>
+
+    <!-- ===== arbiter ===== -->
+    <div class="node hot" style="left:700px; top:740px; width:260px; min-height:150px;">
+      <span class="t">FINAL ARBITER — GEMINI</span>
+      <span class="d">( one more Gemini call · takes both engines' outputs, value-weighs them, picks/synthesizes the more likely one — defaults to the Gemini engine when it's a toss-up )</span>
+    </div>
+
+    <!-- ===== output ===== -->
+    <div class="node" style="left:1040px; top:740px; width:240px; min-height:150px;">
+      <span class="t">DOCTOR UI</span>
+      <span class="d">( live cards during the consult · arbitrated differential after · doctor is still the final call, every time )</span>
+    </div>
+    <div class="node dashed" style="left:1040px; top:910px; width:240px;">
+      <span class="t">TESTING PRODUCT ONLY</span>
+      <span class="d">( explicitly not used for real diagnosis at this stage — framed to doctors as a draft to react to )</span>
+    </div>
+
+    <!-- ===== cost model ===== -->
+    <div class="node" style="left:40px; top:960px; width:1300px; height:190px; text-align:left;">
+      <span class="pg-title">COST MODEL — 15 MIN CONSULT, GEMINI 2.5 FLASH + SARVAM SAARAS ( JUL 2026 PRICING )</span>
+      <div class="pg-chips">
+        <span>STT live + diarization ₹15.0 (~$0.18)</span>
+        <span>live cards (36 calls) ~$0.028</span>
+        <span>weights engine ~$0.004</span>
+        <span>gemini engine ~$0.004</span>
+        <span>final arbiter ~$0.001</span>
+        <span>TOTAL ≈ $0.22 / consult (₹18.3)</span>
+      </div>
+      <span class="pg-note">STT is ~82% of per-consult spend, not LLM tokens. At 20 doctors × 10 consults/day: ≈ $44/day (₹3,624) · ≈ $1,310/month (₹108,720). Cost scales with consult volume, not concurrency.</span>
+    </div>
+    <div class="node dashed" style="left:1400px; top:960px; width:260px; height:190px; text-align:left;">
+      <span class="pg-title">LEGEND</span>
+      <span class="d">teal border = the defensible IP (structuring quality, dual-engine arbitration, verified RAG grounding)</span>
+      <span class="d" style="margin-top:6px;">dashed = cost levers / policy notes, not live data flow</span>
+      <span class="d" style="margin-top:6px;">solid arrows = live data flow</span>
+    </div>
+
+    <!-- ===== arrow labels ===== -->
+    <div class="lbl" style="left:200px; top:92px;">on-device chunks</div>
+    <div class="lbl" style="left:420px; top:92px;">trimmed audio</div>
+    <div class="lbl" style="left:648px; top:92px;">speech only</div>
+    <div class="lbl" style="left:812px; top:220px;">transcript chunks</div>
+    <div class="lbl" style="left:700px; top:465px;">full transcript</div>
+    <div class="lbl" style="left:912px; top:465px;">full transcript</div>
+    <div class="lbl" style="left:1015px; top:558px;">retrieved excerpts (~1,500 tok)</div>
+    <div class="lbl" style="left:672px; top:698px;">weights output</div>
+    <div class="lbl" style="left:915px; top:698px;">tiered DD output</div>
+    <div class="lbl" style="left:965px; top:797px;">chosen / synthesized answer</div>
+    <div class="lbl" style="left:640px; top:2px;">doctor stays the final decision-maker — always</div>
+  </div>
+</div>

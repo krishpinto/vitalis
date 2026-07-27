@@ -1,0 +1,272 @@
+<title>Vitalis — Architecture Map</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #111214;
+    color: #eaeaea;
+    font-family: "Ink Free", "Segoe Print", "Comic Sans MS", cursive;
+  }
+  .top {
+    padding: 20px 28px 10px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px;
+  }
+  .top h1 {
+    margin: 0; font-size: 1.15rem; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .top span { color: #9aa0a6; font-size: 0.85rem; }
+  .scroller { overflow: auto; padding: 0 12px 28px; }
+  .canvas { position: relative; width: 1900px; height: 1310px; }
+  svg.wires { position: absolute; inset: 0; width: 1900px; height: 1310px; pointer-events: none; }
+  svg.wires path, svg.wires line {
+    fill: none; stroke: #cfcfcf; stroke-width: 1.6;
+  }
+  svg.wires .dash { stroke-dasharray: 7 6; stroke: #9aa0a6; }
+
+  .node {
+    position: absolute;
+    border: 1.7px solid #e6e6e6;
+    border-radius: 11px;
+    background: #111214;
+    padding: 9px 11px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .node .t { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 3px; }
+  .node .d { color: #c4c8cc; font-size: 11.5px; display: block; }
+  .node.dashed { border-style: dashed; border-color: #9aa0a6; }
+  .node.dashed .t { color: #d7dadd; }
+  .node.hot { border-color: #35c9d6; }
+  .node.hot .t { color: #7fe3ec; }
+
+  .lbl {
+    position: absolute;
+    color: #b9bec3;
+    font-size: 11px;
+    white-space: nowrap;
+    background: #111214;
+    padding: 0 4px;
+  }
+
+  .pg-title { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; display: block; margin-bottom: 8px; text-align: left; }
+  .pg-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-start; margin-bottom: 8px; }
+  .pg-chips span {
+    border: 1.4px solid #8f959b; border-radius: 7px; padding: 3px 9px;
+    font-size: 11px; color: #dfe2e5;
+  }
+  .pg-note { color: #9fd9c8; font-size: 11.5px; text-align: left; display: block; }
+</style>
+
+<div class="top">
+  <h1>VITALIS — ARCHITECTURE MAP v1.0</h1>
+  <span>companion to the architecture doc · teal border = where the defensible IP lives · scroll →</span>
+</div>
+
+<div class="scroller">
+  <div class="canvas" role="img" aria-label="Vitalis system architecture map: capture, speech-to-text, understanding, reasoning, doctor UI, EMR integration, and Postgres persistence, with labeled data flows">
+
+    <svg class="wires" aria-hidden="true">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#cfcfcf" stroke-width="1.6"/>
+        </marker>
+        <marker id="arrd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#9aa0a6" stroke-width="1.6"/>
+        </marker>
+      </defs>
+
+      <!-- capture row -->
+      <path d="M190,115 L248,115" marker-end="url(#arr)"/>
+      <path d="M430,115 L488,115" marker-end="url(#arr)"/>
+      <path d="M670,115 L728,115" marker-end="url(#arr)"/>
+      <path d="M920,120 L978,120" marker-end="url(#arr)"/>
+      <path d="M1200,120 L1268,120" marker-end="url(#arr)"/>
+      <!-- audio deletion -->
+      <path class="dash" d="M1090,55 L1090,40 L1630,40 L1630,66" marker-end="url(#arrd)"/>
+      <!-- role resolver down to classifier + extractor -->
+      <path d="M1320,185 L1320,255 L430,255 L430,328" marker-end="url(#arr)"/>
+      <path d="M1400,185 L1400,282 L975,282 L975,308" marker-end="url(#arr)"/>
+      <!-- understanding row -->
+      <path d="M530,385 L598,385" marker-end="url(#arr)"/>
+      <path d="M790,382 L858,382" marker-end="url(#arr)"/>
+      <path d="M1090,390 L1168,390" marker-end="url(#arr)"/>
+      <!-- proforma down to scoring -->
+      <path d="M1230,455 L1230,580 L745,580 L745,648" marker-end="url(#arr)"/>
+      <!-- swap note to extractor -->
+      <path class="dash" d="M290,540 L975,540 L975,482" marker-end="url(#arrd)"/>
+      <!-- reasoning row -->
+      <path d="M530,715 L628,715" marker-end="url(#arr)"/>
+      <path d="M860,715 L938,715" marker-end="url(#arr)"/>
+      <path d="M1170,715 L1248,715" marker-end="url(#arr)"/>
+      <!-- scoring <-> red-flag -->
+      <path d="M745,820 L745,878" marker-end="url(#arr)"/>
+      <!-- red-flag into ddx -->
+      <path d="M860,935 L1330,935 L1330,797" marker-end="url(#arr)"/>
+      <!-- ddx to UI -->
+      <path d="M1470,715 L1545,715 L1545,400 L1618,400" marker-end="url(#arr)"/>
+      <!-- proforma to UI -->
+      <path d="M1380,370 L1618,358" marker-end="url(#arr)"/>
+      <!-- UI loop back to doctor -->
+      <path d="M1845,300 L1845,25 L115,25 L115,68" marker-end="url(#arr)"/>
+      <!-- UI down the right column -->
+      <path d="M1740,505 L1740,598" marker-end="url(#arr)"/>
+      <path d="M1740,700 L1740,758" marker-end="url(#arr)"/>
+      <path d="M1740,860 L1740,918" marker-end="url(#arr)"/>
+      <!-- persistence -->
+      <path class="dash" d="M745,990 L745,1078" marker-end="url(#arrd)"/>
+      <path class="dash" d="M1618,810 L1230,810 L1230,1120 L1202,1120" marker-end="url(#arrd)"/>
+      <!-- eval gates ddx -->
+      <path class="dash" d="M1370,878 L1370,797" marker-end="url(#arrd)"/>
+      <!-- consent to doctor -->
+      <path class="dash" d="M115,210 L115,162" marker-end="url(#arrd)"/>
+    </svg>
+
+    <!-- ===== capture row ===== -->
+    <div class="node" style="left:40px; top:70px; width:150px; min-height:90px;">
+      <span class="t">USER — DOCTOR</span>
+      <span class="d">( starts consult · phone or laptop · patient never sees any of this )</span>
+    </div>
+    <div class="node dashed" style="left:40px; top:210px; width:150px;">
+      <span class="t">DPDP CONSENT</span>
+      <span class="d">( captured at consult start, stored on the consult row )</span>
+    </div>
+    <div class="node" style="left:250px; top:70px; width:180px; min-height:90px;">
+      <span class="t">NEXT.JS PWA</span>
+      <span class="d">( mic capture · one codebase for phone + laptop · no install )</span>
+    </div>
+    <div class="node" style="left:490px; top:70px; width:180px; min-height:90px;">
+      <span class="t">SILERO VAD</span>
+      <span class="d">( at the edge: drops silence — only speech leaves the device )</span>
+    </div>
+    <div class="node" style="left:730px; top:70px; width:190px; min-height:100px;">
+      <span class="t">WS GATEWAY</span>
+      <span class="d">( 1s audio frames · local buffer rides out flaky clinic networks )</span>
+    </div>
+    <div class="node" style="left:980px; top:55px; width:220px; min-height:140px;">
+      <span class="t">STREAMING STT + DIARIZATION</span>
+      <span class="d">( managed API: Deepgram / AssemblyAI ~300ms, diarization built in · Sarvam benchmarked for Hinglish · swappable module by design )</span>
+    </div>
+    <div class="node dashed" style="left:1520px; top:70px; width:220px;">
+      <span class="t">RAW AUDIO → DELETED</span>
+      <span class="d">( post-transcription policy: less stored PHI = smaller breach surface, easier DPDP )</span>
+    </div>
+    <div class="node" style="left:1270px; top:70px; width:200px; min-height:115px;">
+      <span class="t">ROLE RESOLVER</span>
+      <span class="d">( speaker 0/1 → doctor / patient · voiceprint match vs enrolled doctor + heuristics: question density, clinical vocab · one-tap override )</span>
+    </div>
+
+    <!-- ===== understanding row ===== -->
+    <div class="node" style="left:330px; top:330px; width:200px; min-height:110px;">
+      <span class="t">COMPLAINT CLASSIFIER</span>
+      <span class="d">( first ~60s picks the template · general fallback · can re-classify mid-consult )</span>
+    </div>
+    <div class="node hot" style="left:600px; top:330px; width:190px; min-height:100px;">
+      <span class="t">TEMPLATE REGISTRY</span>
+      <span class="d">( chest pain → cardiac · abdo pain → GI · the ADAPTIVE proforma )</span>
+    </div>
+    <div class="node" style="left:860px; top:310px; width:230px; min-height:170px;">
+      <span class="t">EXTRACTOR — LLM</span>
+      <span class="d">( Gemini Flash at MVP · constrained JSON schema · extraction ONLY, never judgement · emits FIELD DIFFS on a 3–5s sliding window so fields settle instead of jumping )</span>
+    </div>
+    <div class="node hot" style="left:1170px; top:330px; width:210px; min-height:125px;">
+      <span class="t">PROFORMA STATE</span>
+      <span class="d">( live structured fields · every field stores its transcript span + timestamp = provenance )</span>
+    </div>
+    <div class="node dashed" style="left:60px; top:500px; width:230px; min-height:130px;">
+      <span class="t">SWAP PATH ( doc §5 )</span>
+      <span class="d">( LLM: Gemini API → self-hosted MedGemma / Meditron on vLLM → on-device quantized · STT: managed API → self-hosted Indic ASR + diarization on our Mumbai servers · same schemas — endpoints are config )</span>
+    </div>
+
+    <!-- ===== reasoning row ===== -->
+    <div class="node" style="left:330px; top:650px; width:200px; min-height:130px;">
+      <span class="t">SEVERITY CONSTANTS</span>
+      <span class="d">( fixed clinical multipliers · HEART-score lineage · versioned in DB · NEVER invented by the LLM )</span>
+    </div>
+    <div class="node hot" style="left:630px; top:650px; width:230px; min-height:170px;">
+      <span class="t">SCORING ENGINE — deterministic</span>
+      <span class="d">( rank = feature_match × severity_multiplier, normalized · weighted sum, not raw count · &lt;50ms, zero model calls · DXplain lineage, running since 1987 )</span>
+    </div>
+    <div class="node" style="left:630px; top:880px; width:230px; min-height:110px;">
+      <span class="t">RED-FLAG SCREEN</span>
+      <span class="d">( killers ALWAYS evaluated · thin evidence → "insufficient_data", shown flagged — never silently dropped )</span>
+    </div>
+    <div class="node hot" style="left:940px; top:650px; width:230px; min-height:170px;">
+      <span class="t">RAG CITATION LAYER</span>
+      <span class="d">( pgvector over SNOMED CT · ICD-10 · StatPearls · WHO / ICMR STGs · every differential carries a citation · KB = licensing + ingestion, not authorship )</span>
+    </div>
+    <div class="node" style="left:1250px; top:650px; width:220px; min-height:145px;">
+      <span class="t">DDx PAYLOAD</span>
+      <span class="d">( ranked differentials + supporting AND contradicting fields + missing_fields_that_would_help + red-flag statuses )</span>
+    </div>
+
+    <!-- ===== right column ===== -->
+    <div class="node" style="left:1620px; top:300px; width:240px; min-height:205px;">
+      <span class="t">DOCTOR UI</span>
+      <span class="d">( glanceable side panel · proforma fills quietly · DDx list pin / dismiss · gap prompts: "onset not asked yet" · ≤6s utterance → screen · doctor-only, nothing auto-inserted into the record )</span>
+    </div>
+    <div class="node" style="left:1620px; top:600px; width:240px; min-height:100px;">
+      <span class="t">POST-CONSULT JOB</span>
+      <span class="d">( async via pg-boss: final structured summary + note )</span>
+    </div>
+    <div class="node" style="left:1620px; top:760px; width:240px; min-height:100px;">
+      <span class="t">EMR PUSH ADAPTER</span>
+      <span class="d">( FHIR-shaped bundle · we are a LAYER, not the EMR )</span>
+    </div>
+    <div class="node" style="left:1620px; top:920px; width:240px; min-height:110px;">
+      <span class="t">EXISTING EMR / HMS</span>
+      <span class="d">( demo targets: OpenMRS / Bahmni — open source, zero partnerships needed · ABDM-aligned )</span>
+    </div>
+    <div class="node dashed" style="left:1620px; top:1090px; width:240px;">
+      <span class="t">LEGEND</span>
+      <span class="d">( teal border = defensible IP · dashed = policy / notes · solid arrows = live data flow )</span>
+    </div>
+
+    <!-- ===== bottom ===== -->
+    <div class="node dashed" style="left:1250px; top:880px; width:240px; min-height:100px;">
+      <span class="t">EVAL HARNESS</span>
+      <span class="d">( sealed ground-truth consults, graded before the pipeline ever sees them · gates every release )</span>
+    </div>
+
+    <div class="node" style="left:60px; top:1080px; width:1140px; height:190px; text-align:left;">
+      <span class="pg-title">POSTGRES — managed, ap-south-1 ( Mumbai ) · DRIZZLE ORM · one engine = relational + vectors ( pgvector ) + queue ( pg-boss )</span>
+      <div class="pg-chips">
+        <span>consults</span>
+        <span>transcript_segments</span>
+        <span>proforma_fields ( span + timestamp )</span>
+        <span>differentials ( + citation refs )</span>
+        <span>severity_constants ( versioned )</span>
+        <span>kb_chunks ( embeddings )</span>
+        <span>emr_push_log</span>
+      </div>
+      <span class="pg-note">DPDP rail: consent record · in-country residency · right-to-erasure per patient — schema concerns from day one, not retrofits.</span>
+    </div>
+
+    <!-- ===== arrow labels ===== -->
+    <div class="lbl" style="left:672px; top:92px;">speech only</div>
+    <div class="lbl" style="left:912px; top:97px;">1s chunks</div>
+    <div class="lbl" style="left:1178px; top:92px;">words + speaker 0/1</div>
+    <div class="lbl" style="left:1270px; top:44px;">raw audio</div>
+    <div class="lbl" style="left:690px; top:232px;">first utterances</div>
+    <div class="lbl" style="left:1030px; top:286px;">rolling transcript window</div>
+    <div class="lbl" style="left:534px; top:361px;">selects</div>
+    <div class="lbl" style="left:766px; top:401px;">template schema</div>
+    <div class="lbl" style="left:1078px; top:411px;">field diffs</div>
+    <div class="lbl" style="left:800px; top:557px;">structured proforma ONLY — never the raw transcript</div>
+    <div class="lbl" style="left:560px; top:518px;">endpoint swap only</div>
+    <div class="lbl" style="left:526px; top:692px;">fixed multipliers</div>
+    <div class="lbl" style="left:848px; top:692px;">candidates</div>
+    <div class="lbl" style="left:1176px; top:692px;">+ citations</div>
+    <div class="lbl" style="left:758px; top:840px;">runs in every scoring pass</div>
+    <div class="lbl" style="left:950px; top:912px;">insufficient_data shown, flagged</div>
+    <div class="lbl" style="left:1478px; top:690px;">ranked DDx + gap prompts</div>
+    <div class="lbl" style="left:1462px; top:338px;">live fields</div>
+    <div class="lbl" style="left:640px; top:2px;">the doctor stays the final decision-maker — always</div>
+    <div class="lbl" style="left:1752px; top:540px;">consult ends</div>
+    <div class="lbl" style="left:1752px; top:718px;">final note</div>
+    <div class="lbl" style="left:1752px; top:878px;">FHIR bundle</div>
+    <div class="lbl" style="left:760px; top:1022px;">everything persists with field-level provenance</div>
+    <div class="lbl" style="left:1290px; top:788px;">emr_push_log</div>
+    <div class="lbl" style="left:1382px; top:828px;">gates releases</div>
+  </div>
+</div>
