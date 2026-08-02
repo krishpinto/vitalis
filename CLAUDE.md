@@ -270,6 +270,24 @@ Verified guidelines: replace the 8 placeholder excerpts with NVBDCP/WHO
 dengue-typhoid-malaria content, clinician-reviewed. Owned by the clinical
 co-founder. Blocks real-doctor pilots, not this build.
 
+## UI references
+
+Two open-source RN/Expo apps worth pulling specific component patterns from
+when building/restyling screens — reference only, not vendored into this
+repo:
+
+- **[ai-language-partner](https://github.com/duct-tape2/ai-language-partner)**
+  — Expo app (`apps/mobile`), MIT licensed. Good reference for clean
+  Expo-native screen structure and a chat-adjacent UI. If you copy anything
+  beyond incidental inspiration, keep the MIT attribution.
+- **[Wellbeing-Doctor](https://github.com/abumubaarak/Wellbeing-Doctor)** —
+  bare React Native app with a richer native component set (bottom sheets,
+  calendar strip, gesture handling, camera). No license file — treat as
+  inspiration/reference only, not a source to copy code from.
+
+No better-verified alternatives on hand right now — say the word if you want
+a proper search for more.
+
 ## Repo
 `github.com/krishpinto/SecondOpinion`, branch `main`. `.env` gitignored,
 `.env.example` documents vars. Legacy MVP spec superseded by this file.
